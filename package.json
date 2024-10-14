@@ -1,0 +1,32 @@
+{
+  "name": "node-process-monitor",
+  "version": "1.0.0",
+  "description": "Get process information in real time",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:xiaobaidadada/node-process-monitor.git"
+  },
+  "scripts": {
+    "test": "node .\\build\\Release\\main.node",
+    "cc-rebuild": " node-gyp rebuild",
+    "cc-configure": "node-gyp configure",
+    "build": "prebuild-install --verbose || node-gyp build --release",
+    "go": "npm run cc-configure && npm run build"
+  },
+  "keywords": [],
+  "author": "xiaobaidadada",
+  "license": "MIT",
+  "dependencies": {
+    "prebuild-install": "^7.1.2"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "mocha": "^10.4.0",
+    "typescript": "^5.5.2",
+    "node-addon-api": "^7.0.0",
+    "node-gyp": "^10.2.0",
+    "prebuild": "^13.0.1",
+    "bindings": "^1.5.0"
+  }
+}
