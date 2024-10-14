@@ -11,7 +11,7 @@
     "test": "node .\\build\\Release\\main.node",
     "cc-rebuild": " node-gyp rebuild",
     "cc-configure": "node-gyp configure",
-    "build": "prebuild-install --verbose || node-gyp build --release",
+    "build": "prebuild-install --verbose || node-gyp rebuild  --release",
     "go": "npm run cc-configure && npm run build"
   },
   "keywords": [],
