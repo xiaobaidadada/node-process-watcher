@@ -83,7 +83,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   prebuild: # 执行node的 预构建
-    if: ${{ github.event_name == 'prebuild' }}
+    if: ${{ github.event.inputs.job == 'prebuild' }}
     strategy:
       fail-fast: false
       matrix:
