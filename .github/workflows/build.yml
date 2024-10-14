@@ -88,8 +88,8 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-20.04
-          #- macos-13
+          #- ubuntu-20.04
+          - macos-13
           #- macos-14
           #- windows-2019
     name: Prebuild on ${{ matrix.os }}
