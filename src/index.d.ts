@@ -31,5 +31,4 @@ export interface node_process_monitor {
     pids: (key: string, pids: number[]) => void;
 }
 
-declare const node_process_monitor:node_process_monitor;
-export default node_process_monitor; // 导出默认变量
+export declare const node_process_monitor:node_process_monitor;
