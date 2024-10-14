@@ -1,3 +1,3 @@
 
-const node_process_monitor = require("../build/Release/node-process-monitor.node")
-module.exports.node_process_monitor = node_process_monitor;
+const node_process_watcher = require("../build/Release/node-process-watcher.node")
+module.exports.node_process_watcher = node_process_watcher;

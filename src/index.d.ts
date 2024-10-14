@@ -6,7 +6,7 @@ export interface process_info {
     cpu: number; // 使用率
 }
 
-export interface node_process_monitor {
+export interface node_process_watcher {
 
     /**
      *  监听进程，需要提供一个 key
@@ -31,4 +31,4 @@ export interface node_process_monitor {
     pids: (key: string, pids: number[]) => void;
 }
 
-export declare const node_process_monitor:node_process_monitor;
+export declare const node_process_watcher:node_process_watcher;
