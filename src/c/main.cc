@@ -10,9 +10,10 @@ void on(const Napi::CallbackInfo &info) {
     // 全局对象
     Napi::Env env = info.Env();
     Napi::HandleScope scope(env); // 作用域限制 性能优化 避免对象提前消失
+    Napi::String name = info[0].As<Napi::String>();
     // 接收函数 被子线程调用
-    Napi::Function handler = info[0].As<Napi::Function>();
-    Napi::String name = info[1].As<Napi::String>();
+    Napi::Function handler = info[1].As<Napi::Function>();
+
     auto it = name_set.find(name.Utf8Value());
     if (it != name_set.end()) {
         return; // 已经注册过了
