@@ -68,7 +68,7 @@ jobs:
     if: ${{ github.event.inputs.job == 'push-npm' }}
     name: Publishing to NPM
     runs-on: ubuntu-20.04
-    needs: # 等待别的 job 任务完成
+    #needs: # 等待别的 job 任务完成
       #- prebuild
       #- prebuild-alpine
       #- prebuild-alpine-arm
