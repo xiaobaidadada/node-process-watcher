@@ -18,7 +18,6 @@
   "author": "xiaobaidadada",
   "license": "MIT",
   "dependencies": {
-    "prebuild-install": "^7.1.2"
   },
   "files": [
     "binding.gyp",
@@ -30,6 +29,7 @@
     "mocha": "^10.7.3",
     "node-addon-api": "^7.0.0",
     "node-gyp": "^10.2.0",
-    "prebuild": "^13.0.1"
+    "prebuild": "^13.0.1",
+    "prebuild-install": "^7.1.2"
   }
 }
