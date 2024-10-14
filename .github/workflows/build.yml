@@ -69,7 +69,7 @@ jobs:
     name: Publishing to NPM
     runs-on: ubuntu-20.04
     needs: # 等待别的 job 任务完成
-      - prebuild
+      #- prebuild
       #- prebuild-alpine
       #- prebuild-alpine-arm
       #- prebuild-linux-arm
