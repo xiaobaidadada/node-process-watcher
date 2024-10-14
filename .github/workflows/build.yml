@@ -7,7 +7,7 @@ on:
       job: # 参数名称 通过 ${{ github.event.inputs.job }} 访问值 下面是参数的要求描述
         description: "任务类型"
         required: true
-        default: 'prebuild'
+        default: prebuild
         type: string
 
 env: # 用来定义环境变量 可用于工作流中所有作业的步骤的变量的 map
