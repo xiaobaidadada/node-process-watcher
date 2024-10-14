@@ -1,6 +1,7 @@
 name: "Run prebuild's and Create GitHub and NPM release"
 run-name: Package against ${{ github.ref_name }} # 每次运行的时候显示的名字
 
+# 本yml参考于 https://github.com/WiseLibs/better-sqlite3/blob/master/.github/workflows/build.yml
 on:
   workflow_dispatch: # 手动触发
     inputs: # 定义触发的时候可以输入的参数
@@ -88,10 +89,10 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          #- ubuntu-20.04
-          - macos-13
+          - ubuntu-20.04
+          #- macos-13
           #- macos-14
-          #- windows-2019
+          - windows-2019
     name: Prebuild on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     # needs: test
