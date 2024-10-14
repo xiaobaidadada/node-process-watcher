@@ -2,7 +2,8 @@
   "name": "node-process-monitor",
   "version": "1.0.0",
   "description": "Get process information in real time",
-  "main": "./dist/index.js",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git@github.com:xiaobaidadada/node-process-monitor.git"

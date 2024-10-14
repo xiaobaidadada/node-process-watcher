@@ -30,5 +30,6 @@ export interface node_process_monitor {
      */
     pids: (key: string, pids: number[]) => void;
 }
-const node_process_monitor: node_process_monitor = require("../../build/Release/node-process-monitor.node")
-export default node_process_monitor;
+
+declare const node_process_monitor:node_process_monitor;
+export default node_process_monitor; // 导出默认变量

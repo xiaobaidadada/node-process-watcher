@@ -1,4 +1,4 @@
-import node_process_monitor from "../src/js/index";
+import node_process_monitor from "node-process-monitor";
 
 describe('测试',  function() {
 
