@@ -64,8 +64,8 @@ jobs:
           sudo apt install libsqlite3-mod-spatialite -y
           node -e "require('./lib/index.js')(':memory:').loadExtension('mod_spatialite').exec('SELECT InitSpatialMetaData();')"
 
-  publish:
-    if: ${{ github.event_name == 'release' }}
+  publish-npm:
+    if: ${{ github.event.inputs.job == 'push-npm' }}
     name: Publishing to NPM
     runs-on: ubuntu-20.04
     needs: # 等待别的 job 任务完成
@@ -123,7 +123,7 @@ jobs:
           ${{ env.ELECTRON_BUILD_CMD }} --arch arm64 -u ${{ secrets.GITHUB_TOKEN }}
 
   prebuild-alpine:
-    if: ${{ github.event_name == 'release' }}
+    if: ${{ github.event.inputs.job == 'release' }}
     strategy:
       fail-fast: false
     name: Prebuild on alpine
@@ -137,7 +137,7 @@ jobs:
       - run: ${{ env.NODE_BUILD_CMD }} -u ${{ secrets.GITHUB_TOKEN }}
 
   prebuild-alpine-arm:
-    if: ${{ github.event_name == 'release' }}
+    if: ${{ github.event.inputs.job == 'release' }}
     strategy:
       fail-fast: false
       matrix:
@@ -158,7 +158,7 @@ jobs:
           ${{ env.NODE_BUILD_CMD }} -u ${{ secrets.GITHUB_TOKEN }}"
 
   prebuild-linux-arm:
-    if: ${{ github.event_name == 'release' }}
+    if: ${{ github.event.inputs.job == 'release' }}
     strategy:
       fail-fast: false
       matrix:
