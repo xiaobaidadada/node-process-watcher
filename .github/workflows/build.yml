@@ -70,9 +70,9 @@ jobs:
     runs-on: ubuntu-20.04
     needs: # 等待别的 job 任务完成
       - prebuild
-      - prebuild-alpine
-      - prebuild-alpine-arm
-      - prebuild-linux-arm
+      #- prebuild-alpine
+      #- prebuild-alpine-arm
+      #- prebuild-linux-arm
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
