@@ -1,6 +1,6 @@
 {
   "name": "node-process-watcher",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Get process information in real time",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
@@ -9,17 +9,29 @@
     "url": "git@github.com:xiaobaidadada/node-process-watcher.git"
   },
   "scripts": {
-    "install": "prebuild-install --verbose || node-gyp rebuild --release",
+    "install": "prebuild-install --verbose || npm run install_build",
+    "install_build": "npm install node-addon-api node-gyp --save-dev && node-gyp rebuild --release",
     "cc-rebuild": " node-gyp rebuild",
     "cc-configure": "node-gyp configure",
     "go": "npm run cc-configure && node-gyp build "
   },
-  "keywords": ["process","sysinfo","windwos","linux","monitor","monitoring","cpu","process cpu","real time","watcher"],
+  "keywords": [
+    "process",
+    "sysinfo",
+    "windwos",
+    "linux",
+    "monitor",
+    "monitoring",
+    "cpu",
+    "process cpu",
+    "real time",
+    "watcher"
+  ],
   "author": "xiaobaidadada",
   "license": "MIT",
   "dependencies": {
-    "prebuild-install": "^7.1.2",
-    "bindings": "^1.5.0"
+    "bindings": "^1.5.0",
+    "prebuild-install": "^7.1.2"
   },
   "files": [
     "binding.gyp",
@@ -28,7 +40,7 @@
   ],
   "devDependencies": {
     "mocha": "^10.7.3",
-    "node-addon-api": "^7.0.0",
+    "node-addon-api": "^7.1.1",
     "node-gyp": "^10.2.0",
     "prebuild": "^13.0.1"
   }
