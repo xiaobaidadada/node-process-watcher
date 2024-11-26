@@ -187,6 +187,7 @@ void runner() {
                 // 是目录且以数字命名才是进程 /proc 下除了进程文件，还有别的文件
                 pid_t pid = atoi(entry->d_name);
                 ProcessInfo procInfo;
+                procInfo.rss = 0;
                 if (read_process_stat(pid, &procInfo,1) == 0) {
                     tem_process_list[tem_process_count] = procInfo;
                     tem_process_count++;
