@@ -125,7 +125,7 @@ jobs:
           ${{ env.ELECTRON_BUILD_CMD }} --arch arm64 -u ${{ secrets.GITHUB_TOKEN }}
 
   prebuild-alpine:
-    if: ${{ github.event.inputs.job == 'alpine' }}
+    if: ${{ github.event.inputs.job == 'alpine' || github.event.inputs.job == 'run-all' }}
     strategy:
       fail-fast: false
     name: Prebuild on alpine
