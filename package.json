@@ -16,6 +16,8 @@
     "go": "npm run cc-configure && node-gyp build "
   },
   "keywords": [
+    "进程信息",
+    "实时获取",
     "process",
     "sysinfo",
     "windwos",
