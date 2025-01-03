@@ -55,7 +55,7 @@ void on(const Napi::CallbackInfo &info) {
     }
 }
 
-void close(const Napi::CallbackInfo &info) {
+void off(const Napi::CallbackInfo &info) {
     Napi::Env env = info.Env();
     Napi::String name = info[0].As<Napi::String>();
 //    // 通过 Napi::External<Napi::ThreadSafeFunction> 解包 tsfn
@@ -97,7 +97,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set(Napi::String::New(env, "on"),
                 Napi::Function::New(env, on));
     exports.Set(Napi::String::New(env, "close"),
-                Napi::Function::New(env, close));
+                Napi::Function::New(env, off));
     exports.Set(Napi::String::New(env, "pids"),
                 Napi::Function::New(env, reset_pids));
     return exports;

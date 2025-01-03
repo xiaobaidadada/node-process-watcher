@@ -1,6 +1,6 @@
 {
   "name": "node-process-watcher",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Get process information in real time",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
@@ -9,11 +9,13 @@
     "url": "git@github.com:xiaobaidadada/node-process-watcher.git"
   },
   "scripts": {
-    "install": "prebuild-install --verbose || npm run install_build",
+    "install": "npm run build || prebuild-install --verbose",
+    "build": "node-gyp-build",
     "install_build": "npm install node-addon-api node-gyp --save-dev && node-gyp rebuild --release",
     "cc-rebuild": " node-gyp rebuild",
     "cc-configure": "node-gyp configure",
-    "go": "npm run cc-configure && node-gyp build "
+    "go": "npm run cc-configure && node-gyp build ",
+    "prebuildify": "prebuildify --napi "
   },
   "keywords": [
     "进程信息",
@@ -32,8 +34,9 @@
   "author": "xiaobaidadada",
   "license": "MIT",
   "dependencies": {
-    "bindings": "^1.5.0",
-    "prebuild-install": "^7.1.2"
+    "prebuild-install": "^7.1.2",
+    "node-addon-api": "^7.1.1",
+    "node-gyp-build": "^4.8.4"
   },
   "files": [
     "binding.gyp",
@@ -42,8 +45,7 @@
   ],
   "devDependencies": {
     "mocha": "^10.7.3",
-    "node-addon-api": "^7.1.1",
-    "node-gyp": "^10.2.0",
+    "prebuildify": "6.0.1",
     "prebuild": "^13.0.1"
   }
 }
