@@ -18,6 +18,9 @@
   "keywords": [
     "进程信息",
     "实时获取",
+    "获取所有进程信息",
+    "杀死进程",
+    "ps-list",
     "process",
     "sysinfo",
     "windwos",
