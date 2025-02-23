@@ -29,6 +29,12 @@ export interface node_process_watcher {
      * @param pids
      */
     pids: (key: string, pids: number[]) => void;
+
+    /**
+     * get sys all pid  获取系统所有的进程pid信息
+     * @param ppid
+     */
+    get_all_pid(ppid?: number): {pid:number, cpu:number ,ppid:number}[];
 }
 
 export declare const node_process_watcher:node_process_watcher;

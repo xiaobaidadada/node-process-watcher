@@ -4,6 +4,7 @@
 std::map<std::string ,Napi::ThreadSafeFunction> name_tsfn;
 std::set<std::string> name_set;
 std::map<std::string,std::set<int>> name_pids;
+int print_second = 1; // 默认打印间隔 1 秒
 
 void on(const Napi::CallbackInfo &info) {
 
@@ -92,6 +93,32 @@ void reset_pids(const Napi::CallbackInfo &info) {
     }
     set_pids(name.Utf8Value(),pid_set);
 }
+void set_print_second(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    Napi::Number second = info[0].As<Napi::Number>();
+    print_second = second.Int32Value();
+}
+
+Napi::Value get_all_pid(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    Napi::Number ppid = info[0].As<Napi::Number>();
+    std::vector<process_pid_info>  pid_set;
+    get_all_process_ids(pid_set,info.Length() == 0 ?-1: ppid.Int64Value());
+    Napi::Array jsArray = Napi::Array::New(env, pid_set.size());
+    for (size_t i = 0; i < pid_set.size(); ++i) {
+        const process_pid_info& info = pid_set[i];
+        // 创建一个 JavaScript 对象来存储每个 process_pid_info 的字段
+        Napi::Object obj = Napi::Object::New(env);
+        obj.Set("pid", Napi::Number::New(env, info.pid));
+        obj.Set("ppid", Napi::Number::New(env, info.ppid));
+        // 将该对象添加到 JavaScript 数组中
+        jsArray[i] = obj;
+    }
+    return jsArray;
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
     // 设置函数
     exports.Set(Napi::String::New(env, "on"),
@@ -100,6 +127,10 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
                 Napi::Function::New(env, off));
     exports.Set(Napi::String::New(env, "pids"),
                 Napi::Function::New(env, reset_pids));
+    exports.Set(Napi::String::New(env, "set_print_second"),
+                Napi::Function::New(env, set_print_second));
+    exports.Set(Napi::String::New(env, "get_all_pid"),
+              Napi::Function::New(env, get_all_pid));
     return exports;
 }
 

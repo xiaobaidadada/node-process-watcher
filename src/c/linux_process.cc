@@ -166,7 +166,9 @@ int get_cpu_times(SysTimes *times) {
 extern std::map<std::string ,Napi::ThreadSafeFunction> name_tsfn;
 extern std::set<std::string> name_set;
 extern std::map<std::string,std::set<int>> name_pids;
+extern int print_second ; 
 std::mutex mtx;  // 创建一个互斥锁
+
 
 void runner() {
     for(;;) {
@@ -264,6 +266,32 @@ void send_data_to_on() {
 
 
 }
+
+void get_all_process_ids(std::vector<process_pid_info> & pid_set,unsigned long ppid)
+{
+    DIR *dir = opendir("/proc");
+    if (!dir) {
+        return ;
+    }
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_DIR && isdigit(entry->d_name[0])) {
+            // 是目录且以数字命名才是进程 /proc 下除了进程文件，还有别的文件
+            pid_t pid = atoi(entry->d_name);
+            ProcessInfo procInfo;
+            procInfo.rss = 0;
+            if (read_process_stat(pid, &procInfo,1) == 0) {
+                if (ppid != -1 && procInfo.ppid!= ppid)
+                {
+                    continue;
+                }
+                process_pid_info info = {pid, procInfo.ppid};
+                pid_set.push_back(info);
+            }
+        }
+    }
+    closedir(dir);
+}
 void start() {
 
     process_list = (ProcessInfo *) xmalloc(process_list_size * sizeof *process_list); // 临时按32个进程处理
@@ -277,7 +305,7 @@ void start() {
     thread.detach();
     for(;;) {
         if (process_count==0) {
-            sleep(1);
+            sleep(print_second);
             continue;
         }
         // 遍历打印一下
@@ -288,7 +316,7 @@ void start() {
         mtx.lock();  // 尝试获取锁
         send_data_to_on();
         mtx.unlock();  // 释放锁
-        sleep(1);
+        sleep(print_second);
     };
 }
 

@@ -11,9 +11,17 @@
 #include <iostream>
 #include <string>
 
+typedef struct process_pid_info
+{
+    unsigned long pid; // 进程ID
+    unsigned long ppid; // 父进程
+} process_pid_info;
+
 void start();
 
 void stop(std::string name);
 
-void set_pids(std::string name,std::set<int> pid_set);
+void set_pids(std::string name, std::set<int> pid_set);
 
+// 获取系统所有的进程id信息
+void get_all_process_ids(std::vector<process_pid_info> & pid_set,unsigned long ppid);
