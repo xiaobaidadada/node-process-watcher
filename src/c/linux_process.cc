@@ -10,6 +10,7 @@
 #include <dirent.h>
 #include <ctype.h>
 #include <mutex>
+#include <signal.h>  // 提供 kill() 函数
 
 #define PROC_DIR "/proc"
 #define STAT_FILE "stat"
@@ -265,6 +266,20 @@ void send_data_to_on() {
     }
 
 
+}
+
+void kill_process(unsigned long pid, bool kill_all_children )
+{
+    if (kill_all_children)
+    {
+        std::vector<process_pid_info>  pid_set;
+        get_all_process_ids(pid_set,pid);
+        for (size_t i = 0; i < pid_set.size(); ++i) {
+            const process_pid_info info = pid_set[i];
+            kill_process(info.pid,kill_all_children); // 递归的关闭所有进程的子进程
+        }
+    }
+    kill(pid, SIGTERM); // 向目标进程发送 SIGTERM 信号（请求进程终止） SIGKILL 也可以 但是进程会立即被关闭 可能发生的清理工作无法进行
 }
 
 void get_all_process_ids(std::vector<process_pid_info> & pid_set,unsigned long ppid)

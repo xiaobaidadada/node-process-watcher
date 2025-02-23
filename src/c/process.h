@@ -25,3 +25,5 @@ void set_pids(std::string name, std::set<int> pid_set);
 
 // 获取系统所有的进程id信息
 void get_all_process_ids(std::vector<process_pid_info> & pid_set,unsigned long ppid);
+
+void kill_process(unsigned long pid, bool kill_all_children = false);
