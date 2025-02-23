@@ -1,6 +1,6 @@
 # node-process-watcher
 A lightweight real-time monitoring system for all process information.
-轻量级的实时监控系统上所有的进程信息。
+轻量级的实时监控系统上所有的进程信息。并可以获取获取系统所有的进程信息，进程的子进程信息，杀死进程以及子进程。
 # Example
 ```js
 const {node_process_watcher} = require("node-process-watcher");
@@ -25,6 +25,12 @@ node_process_watcher.on("screen2",(list)=>{
         node_process_watcher.close("screen2");
     }
 })
+
+node_process_watcher.get_all_pid(); // 获取所有进程信息
+node_process_watcher.get_all_pid(1234); // 获取1234的所有子进程信息
+
+node_process_watcher.kill_process(1234,true); // 杀死 1234 包括他的 的所有子进程
+
 ```
 
 # 说明
