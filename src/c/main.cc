@@ -118,7 +118,16 @@ Napi::Value get_all_pid(const Napi::CallbackInfo &info)
     }
     return jsArray;
 }
-
+void kill (const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    if(info.Length() < 1)
+    {
+        Napi::TypeError::New(env, "param num is error .").ThrowAsJavaScriptException();
+        return;
+    }
+    kill_process(info[0].As<Napi::Number>().Int64Value(), info.Length() ==1 ? false: info[1].As<Napi::Boolean>().Value());
+}
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
     // 设置函数
     exports.Set(Napi::String::New(env, "on"),
@@ -131,6 +140,8 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
                 Napi::Function::New(env, set_print_second));
     exports.Set(Napi::String::New(env, "get_all_pid"),
               Napi::Function::New(env, get_all_pid));
+    exports.Set(Napi::String::New(env, "kill_process"),
+              Napi::Function::New(env, kill));
     return exports;
 }
 

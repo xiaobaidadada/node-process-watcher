@@ -35,6 +35,13 @@ export interface node_process_watcher {
      * @param ppid
      */
     get_all_pid(ppid?: number): {pid:number, cpu:number ,ppid:number}[];
+
+    /**
+     * kill process 可以关闭所有的子进程
+     * @param pid
+     * @param kill_all_children default false
+     */
+    kill_process(pid:number,kill_all_children ?: boolean): void;
 }
 
 export declare const node_process_watcher:node_process_watcher;

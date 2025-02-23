@@ -337,6 +337,29 @@ void send_data_to_on()
     }
 }
 
+void kill_process(unsigned long pid, bool kill_all_children )
+{
+    if (kill_all_children)
+    {
+        std::vector<process_pid_info>  pid_set;
+        get_all_process_ids(pid_set,pid);
+        for (size_t i = 0; i < pid_set.size(); ++i) {
+            const process_pid_info info = pid_set[i];
+            kill_process(info.pid,kill_all_children); // 递归的关闭所有进程的子进程
+        }
+    }
+    // 打开目标进程的句柄
+    HANDLE hProcess;
+    hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
+    if (hProcess == NULL) {
+        return;
+    }
+    // 终止进程
+    TerminateProcess(hProcess, 0);
+    // 关闭句柄
+    CloseHandle(hProcess);
+}
+
 void get_all_process_ids(std::vector<process_pid_info> & pid_set,unsigned long ppid)
 {
     HANDLE Snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPALL, 0);
