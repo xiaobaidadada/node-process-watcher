@@ -1,6 +1,6 @@
 {
   "name": "node-process-watcher",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "description": "Get process information in real time",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
@@ -13,7 +13,7 @@
     "install_build": "npm install node-addon-api node-gyp --save-dev && node-gyp rebuild --release",
     "cc-rebuild": " node-gyp rebuild",
     "cc-configure": "node-gyp configure",
-    "go": "npm run cc-configure && node-gyp build "
+    "go": "npm run cc-configure && node-gyp build --debug"
   },
   "keywords": [
     "进程信息",
