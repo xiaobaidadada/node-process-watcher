@@ -17,8 +17,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04, windows-2019]
-        architecture: [ x64, arm64 ]
-    name: Prebuild on ${{ matrix.os }},${{ matrix.architecture }}
+#        architecture: [ x64, arm64 ]
+    name: Prebuild on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     steps:
       - name: 拉去仓库代码
@@ -45,7 +45,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: prebuilt-${{ runner.os }}-${{ matrix.architecture }}   # 会覆盖之前的同名文件
+          name: prebuilt-${{ runner.os }}  # 会覆盖之前的同名文件
           path: prebuilds/
 
   release:
@@ -58,26 +58,16 @@ jobs:
       - name:  Download Windows x64 artifact
         uses: actions/download-artifact@v4
         with:
-          name:  prebuilt-Windows-x64
-          path: ${{ github.workspace }}/prebuilds
-
-      - name: Download Windows ARM64 artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: prebuilt-Windows-arm64
+          name:  prebuilt-Windows
           path: ${{ github.workspace }}/prebuilds
 
       - name: Download Linux x64 artifact
         uses: actions/download-artifact@v4
         with:
-          name: prebuilt-Linux-x64
+          name: prebuilt-Linux
           path: ${{ github.workspace }}/prebuilds
 
-      - name: Download Linux ARM64 artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: prebuilt-Linux-arm64
-          path: ${{ github.workspace }}/prebuilds
+
 
 #
       - uses: actions/setup-node@v4
