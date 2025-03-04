@@ -42,7 +42,8 @@
   "files": [
     "binding.gyp",
     "common.gypi",
-    "src/**"
+    "src/**",
+    "prebuilds/**"
   ],
   "devDependencies": {
     "mocha": "^10.7.3",
