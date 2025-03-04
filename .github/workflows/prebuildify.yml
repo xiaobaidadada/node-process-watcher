@@ -20,21 +20,27 @@ jobs:
         os: [ubuntu-20.04, windows-2019]
 
     steps:
-      - name: Checkout repository
+      - name: 拉去仓库代码
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
+      - name: 安装node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
-#          cache: "npm"
-
-      - name: Install dev dependencies
-        run: npm install
-
-      - name: Build native module
+      - if: ${{ startsWith(matrix.os, 'windows') }}
+        run: pip.exe install setuptools
+      - if: ${{ startsWith(matrix.os, 'macos') }}
+        run: brew install python-setuptools
+      - if: ${{ !startsWith(matrix.os, 'windows') && !startsWith(matrix.os, 'macos') }}
+        run: python3 -m pip install setuptools
+      - if: ${{ startsWith(matrix.os, 'ubuntu') }}
+        run: |
+          sudo apt update
+          sudo apt install gcc-10 g++-10 -y
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 --slave /usr/bin/g++ g++ /usr/bin/g++-10 --slave /usr/bin/gcov gcov /usr/bin/gcov-10
+      - name: 安装依赖
+        run: npm install --ignore-scripts
+      - name: 构建
         run: npx prebuildify --napi
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
