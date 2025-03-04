@@ -13,12 +13,13 @@ on:
 jobs:
   build:
     if: ${{ github.event.inputs.job == 'build'  || github.event.inputs.job == 'push' || github.event.inputs.job == 'look' }}
-    name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+
     strategy:
       matrix:
         os: [ubuntu-20.04, windows-2019]
         architecture: [ x64, arm64 ]
+    name: Prebuild on ${{ matrix.os }},${{ matrix.architecture }}
+    runs-on: ${{ matrix.os }}
     steps:
       - name: 拉去仓库代码
         uses: actions/checkout@v4
@@ -44,7 +45,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: prebuilt-${{ runner.os }}-${{ runner.arch }}   # 会覆盖之前的同名文件
+          name: prebuilt-${{ runner.os }}-${{ runner.architecture }}   # 会覆盖之前的同名文件
           path: prebuilds/
 
   release:
