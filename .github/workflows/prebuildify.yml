@@ -78,7 +78,7 @@ jobs:
 #          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
   look:
     if: ${{ github.event.inputs.job == 'look' }}
-    name: Release Prebuilt Binaries
+    name: 查看
     runs-on: ubuntu-latest
     needs: build
     steps:
