@@ -45,7 +45,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: prebuilt-${{ runner.os }}-${{ runner.architecture }}   # 会覆盖之前的同名文件
+          name: prebuilt-${{ runner.os }}-${{ matrix.architecture }}   # 会覆盖之前的同名文件
           path: prebuilds/
 
   release:
@@ -58,25 +58,25 @@ jobs:
       - name:  Download Windows x64 artifact
         uses: actions/download-artifact@v4
         with:
-          name:  prebuilt-Windows-X64
+          name:  prebuilt-Windows-x64
           path: ${{ github.workspace }}/prebuilds
 
       - name: Download Windows ARM64 artifact
         uses: actions/download-artifact@v4
         with:
-          name: prebuilt-Windows-ARM64
+          name: prebuilt-Windows-arm64
           path: ${{ github.workspace }}/prebuilds
 
       - name: Download Linux x64 artifact
         uses: actions/download-artifact@v4
         with:
-          name: prebuilt-Linux-X64
+          name: prebuilt-Linux-x64
           path: ${{ github.workspace }}/prebuilds
 
       - name: Download Linux ARM64 artifact
         uses: actions/download-artifact@v4
         with:
-          name: prebuilt-Linux-ARM64
+          name: prebuilt-Linux-arm64
           path: ${{ github.workspace }}/prebuilds
 
 #
