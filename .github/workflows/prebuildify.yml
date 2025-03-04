@@ -17,7 +17,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, windows-2019]
+        os: [ubuntu-20.04, windows-2019, windows-2019-arm64, ubuntu-20.04-arm64, alpine-3.18, alpine-3.18-arm64]
 
     steps:
       - name: 拉去仓库代码
@@ -44,7 +44,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: prebuilt-${{ runner.os }} # 会覆盖之前的同名文件
+          name: prebuilt-${{ runner.os }}-${{ runner.arch }}   # 会覆盖之前的同名文件
           path: prebuilds/
 
   release:
@@ -54,20 +54,43 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
-      - name: Download Windows artifact
+      - name:  Download Windows x64 artifact
         uses: actions/download-artifact@v4
         with:
-          name: prebuilt-Windows
+          name:  prebuilt-Windows-X64
           path: ${{ github.workspace }}/prebuilds
 
-      - name: Download Linux artifact
+      - name: Download Windows ARM64 artifact
         uses: actions/download-artifact@v4
         with:
-          name: prebuilt-Linux
+          name: prebuilt-Windows-ARM64
           path: ${{ github.workspace }}/prebuilds
 
-      - name: List files after download
-        run: ls -al ${{ github.workspace }}
+      - name: Download Linux x64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: prebuilt-Linux-X64
+          path: ${{ github.workspace }}/prebuilds
+
+      - name: Download Linux ARM64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: prebuilt-Linux-ARM64
+          path: ${{ github.workspace }}/prebuilds
+
+      - name: Download Alpine x64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name:  prebuilt-Alpine-X64
+          path: ${{ github.workspace }}/prebuilds
+
+      - name:   Download Alpine ARM64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name:  prebuilt-Alpine-ARM64
+          path: ${{ github.workspace }}/prebuilds
+
+
 #
       - uses: actions/setup-node@v4
         with:

@@ -52,6 +52,7 @@ jobs:
           #- macos-13
           #- macos-14
           - windows-2019
+          - windows-2019-arm64
     name: Prebuild on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     # needs: test
