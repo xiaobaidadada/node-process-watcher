@@ -48,13 +48,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-20.04, windows-2019 ]
-        architecture: [ x64, arm64 ]
+#        architecture: [ x64, arm64 ]
 #        os:
 #          - ubuntu-20.04
 #          #- macos-13
 #          #- macos-14
 #          - windows-2019
-    name:  Prebuild on ${{ matrix.os }},${{ matrix.architecture }}
+    name:  Prebuild on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     # needs: test
     steps:
