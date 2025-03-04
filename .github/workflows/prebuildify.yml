@@ -33,7 +33,7 @@ jobs:
         run: npm install
 
       - name: Build native module
-        run: npm run prebuildify
+        run: npx prebuildify --napi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
