@@ -42,6 +42,19 @@ export interface node_process_watcher {
      * @param kill_all_children default false
      */
     kill_process(pid:number,kill_all_children ?: boolean): void;
+
+    /**
+     * 使用子线程遍历全部的文件与数量
+     * @param folder_name
+     * @param on
+     */
+    on_folder_size(folder_name:string,on:(file_num:number,total_size:number)=>void);
+
+    /**
+     * 停止对某个目录的数量统计
+     * @param folder_name
+     */
+    stop_folder_size(folder_name:string);
 }
 
 export declare const node_process_watcher:node_process_watcher;

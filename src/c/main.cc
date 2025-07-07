@@ -1,10 +1,15 @@
 
+#include <filesystem>
+#include <stack>
 #include "process.h"
+namespace fs = std::filesystem;
 
 std::map<std::string ,Napi::ThreadSafeFunction> name_tsfn;
 std::set<std::string> name_set;
 std::map<std::string,std::set<int>> name_pids;
 int print_second = 1; // 默认打印间隔 1 秒
+
+std::set<std::string> thread_id_set;
 
 void on(const Napi::CallbackInfo &info) {
 
@@ -128,6 +133,81 @@ void kill (const Napi::CallbackInfo &info)
     }
     kill_process(info[0].As<Napi::Number>().Int64Value(), info.Length() ==1 ? false: info[1].As<Napi::Boolean>().Value());
 }
+
+uintmax_t get_directory_size(std::string dir,Napi::ThreadSafeFunction tsfn) {
+    const fs::path& root(dir);
+    if (!fs::exists(root) || !fs::is_directory(root)) {
+        // std::cerr << "路径无效: " << root << std::endl;
+        return 0;
+    }
+
+    std::stack<fs::path> dirs;
+    dirs.push(root);
+    uintmax_t total_size = 0;
+    uintmax_t file_num = 0;
+    
+    while (!dirs.empty()) {
+        if (thread_id_set.find(dir) == thread_id_set.end()) {
+            return 0;
+        }
+        fs::path current_dir = dirs.top();
+        dirs.pop();
+        tsfn.BlockingCall([file_num,total_size](Napi::Env env, Napi::Function jsCallback)
+                    {
+                        // 但是这里是可以使用 env的
+                        Napi::HandleScope scope(Napi::Env);
+                        // Napi::Object object = Napi::Object::New(env);
+                        // object.Set("file_num", Napi::Number::New(env, file_num));
+                        // object.Set("total_size", Napi::Number::New(env, total_size));
+                        jsCallback.Call({Napi::Number::New(env, file_num),Napi::Number::New(env, total_size)});
+                    });
+        for (const auto& entry : fs::directory_iterator(current_dir)) {
+            try {
+                if (fs::is_directory(entry.status())) {
+                    dirs.push(entry.path());  // 目录压栈，后续继续处理
+                } else if (fs::is_regular_file(entry.status())) {
+                    total_size += fs::file_size(entry.path());
+                    file_num++;
+                }
+            } catch (const std::exception& e) {
+                // std::cerr << "跳过错误项: " << entry.path() << " 错误: " << e.what() << std::endl;
+            }
+        }
+    }
+    return total_size;
+}
+
+void on_folder_size(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    Napi::HandleScope scope(env); 
+    Napi::String folder_name = info[0].As<Napi::String>();
+    Napi::Function on_handler = info[1].As<Napi::Function>();
+    Napi::ThreadSafeFunction tsfn = Napi::ThreadSafeFunction::New(
+            env,
+            on_handler,  
+            "ChildThread",                  
+            0,                              
+            1                              
+    );
+    // fs::path dir(folder_name.Utf8Value());
+    std::string dir  =  folder_name.Utf8Value();
+    std::thread thread([dir,tsfn]() {
+        get_directory_size(dir,tsfn);
+            // 释放
+            tsfn.Release();
+        });
+    thread.detach();
+    thread_id_set.insert(folder_name.Utf8Value());
+}
+void stop_folder_size(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    Napi::HandleScope scope(env); 
+    Napi::String folder_name = info[0].As<Napi::String>();
+    thread_id_set.erase(folder_name.Utf8Value());
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
     // 设置函数
     exports.Set(Napi::String::New(env, "on"),
@@ -142,11 +222,14 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
               Napi::Function::New(env, get_all_pid));
     exports.Set(Napi::String::New(env, "kill_process"),
               Napi::Function::New(env, kill));
+    exports.Set(Napi::String::New(env, "on_folder_size"),
+              Napi::Function::New(env, on_folder_size));
+    exports.Set(Napi::String::New(env, "stop_folder_size"),
+              Napi::Function::New(env, stop_folder_size));
     return exports;
 }
 
-// 模块的入口点，node addon 就是写模块的
-// 名字 初始化函数
+
 NODE_API_MODULE(get_process, Init)
 
 
