@@ -152,15 +152,6 @@ uintmax_t get_directory_size(std::string dir,Napi::ThreadSafeFunction tsfn) {
         }
         fs::path current_dir = dirs.top();
         dirs.pop();
-        tsfn.BlockingCall([file_num,total_size](Napi::Env env, Napi::Function jsCallback)
-                    {
-                        // 但是这里是可以使用 env的
-                        Napi::HandleScope scope(Napi::Env);
-                        // Napi::Object object = Napi::Object::New(env);
-                        // object.Set("file_num", Napi::Number::New(env, file_num));
-                        // object.Set("total_size", Napi::Number::New(env, total_size));
-                        jsCallback.Call({Napi::Number::New(env, file_num),Napi::Number::New(env, total_size)});
-                    });
         for (const auto& entry : fs::directory_iterator(current_dir)) {
             try {
                 if (fs::is_directory(entry.status())) {
@@ -173,6 +164,15 @@ uintmax_t get_directory_size(std::string dir,Napi::ThreadSafeFunction tsfn) {
                 // std::cerr << "跳过错误项: " << entry.path() << " 错误: " << e.what() << std::endl;
             }
         }
+        tsfn.BlockingCall([file_num,total_size](Napi::Env env, Napi::Function jsCallback)
+                            {
+                                // 但是这里是可以使用 env的
+                                Napi::HandleScope scope(Napi::Env);
+                                // Napi::Object object = Napi::Object::New(env);
+                                // object.Set("file_num", Napi::Number::New(env, file_num));
+                                // object.Set("total_size", Napi::Number::New(env, total_size));
+                                jsCallback.Call({Napi::Number::New(env, file_num),Napi::Number::New(env, total_size)});
+                            });
     }
     return total_size;
 }
