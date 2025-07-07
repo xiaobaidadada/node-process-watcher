@@ -2,7 +2,7 @@
 #include <filesystem>
 #include <stack>
 #include "process.h"
-namespace fs = std::filesystem;
+// namespace fs = std::filesystem;
 
 std::map<std::string ,Napi::ThreadSafeFunction> name_tsfn;
 std::set<std::string> name_set;
@@ -135,13 +135,13 @@ void kill (const Napi::CallbackInfo &info)
 }
 
 uintmax_t get_directory_size(std::string dir,Napi::ThreadSafeFunction tsfn) {
-    const fs::path& root(dir);
-    if (!fs::exists(root) || !fs::is_directory(root)) {
+    const std::filesystem::path& root(dir);
+    if (!exists(root) || !is_directory(root)) {
         // std::cerr << "路径无效: " << root << std::endl;
         return 0;
     }
 
-    std::stack<fs::path> dirs;
+    std::stack<std::filesystem::path> dirs;
     dirs.push(root);
     uintmax_t total_size = 0;
     uintmax_t file_num = 0;
@@ -150,7 +150,7 @@ uintmax_t get_directory_size(std::string dir,Napi::ThreadSafeFunction tsfn) {
         if (thread_id_set.find(dir) == thread_id_set.end()) {
             return 0;
         }
-        fs::path current_dir = dirs.top();
+        std::filesystem::path current_dir = dirs.top();
         dirs.pop();
         tsfn.BlockingCall([file_num,total_size](Napi::Env env, Napi::Function jsCallback)
                     {
@@ -161,12 +161,12 @@ uintmax_t get_directory_size(std::string dir,Napi::ThreadSafeFunction tsfn) {
                         // object.Set("total_size", Napi::Number::New(env, total_size));
                         jsCallback.Call({Napi::Number::New(env, file_num),Napi::Number::New(env, total_size)});
                     });
-        for (const auto& entry : fs::directory_iterator(current_dir)) {
+        for (const auto& entry : std::filesystem::directory_iterator(current_dir)) {
             try {
-                if (fs::is_directory(entry.status())) {
+                if (is_directory(entry.status())) {
                     dirs.push(entry.path());  // 目录压栈，后续继续处理
-                } else if (fs::is_regular_file(entry.status())) {
-                    total_size += fs::file_size(entry.path());
+                } else if (is_regular_file(entry.status())) {
+                    total_size += file_size(entry.path());
                     file_num++;
                 }
             } catch (const std::exception& e) {
