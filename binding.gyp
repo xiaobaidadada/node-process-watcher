@@ -12,7 +12,7 @@
            "sources": ["src/c/mac_process.cc"],
          }],
          ['OS=="linux"', {
-           "sources": ["src/c/linuxprocess.cc"],
+           "sources": ["src/c/linux_process.cc"],
          }]
        ],
     },
