@@ -14,12 +14,12 @@
       'xcode_settings': {
         'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
         'CLANG_CXX_LIBRARY': 'libc++',
-        'MACOSX_DEPLOYMENT_TARGET': '10.7',
+        'MACOSX_DEPLOYMENT_TARGET': '10.15',
         'GCC_SYMBOLS_PRIVATE_EXTERN': 'YES', # -fvisibility=hidden
         "OTHER_CPLUSPLUSFLAGS": [ "-std=c++17" ],
       }
     }],
-    ['OS=="win"', { 
+    ['OS=="win"', {
       'msvs_settings': {
         'VCCLCompilerTool': {
           'ExceptionHandling': 1,
