@@ -350,5 +350,5 @@ void set_pids(std::string name,std::set<int> pid_set) {
 }
 
 bool RefreshWinInetProxy() {
-    return true
+    return true;
 }

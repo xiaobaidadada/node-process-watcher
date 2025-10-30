@@ -306,5 +306,5 @@ void kill_process(unsigned long pid, bool kill_all_children) {
 }
 
 bool RefreshWinInetProxy() {
-    return true
+    return true;
 }
