@@ -208,6 +208,14 @@ void stop_folder_size(const Napi::CallbackInfo &info)
     thread_id_set.erase(folder_name.Utf8Value());
 }
 
+
+Napi::Boolean refresh_winInet_proxy(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+
+    bool success = RefreshWinInetProxy();
+    return Napi::Boolean::New(env, success);
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
     // 设置函数
     exports.Set(Napi::String::New(env, "on"),
@@ -226,6 +234,8 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
               Napi::Function::New(env, on_folder_size));
     exports.Set(Napi::String::New(env, "stop_folder_size"),
               Napi::Function::New(env, stop_folder_size));
+  exports.Set(Napi::String::New(env, "refresh_winInet_proxy"),
+            Napi::Function::New(env, refresh_winInet_proxy));
     return exports;
 }
 

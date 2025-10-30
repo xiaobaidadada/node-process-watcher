@@ -55,6 +55,8 @@ export interface node_process_watcher {
      * @param folder_name
      */
     stop_folder_size(folder_name:string);
+
+    refresh_winInet_proxy():boolean;
 }
 
 export declare const node_process_watcher:node_process_watcher;

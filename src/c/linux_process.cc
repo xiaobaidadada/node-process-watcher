@@ -348,3 +348,7 @@ void set_pids(std::string name,std::set<int> pid_set) {
     name_pids[name] = pid_set;
     mtx.unlock();  // 释放锁
 }
+
+bool RefreshWinInetProxy() {
+    return true
+}

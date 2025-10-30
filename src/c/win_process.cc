@@ -19,6 +19,9 @@
 #include <math.h>
 #include <algorithm> // 包含了min函数
 #include <stdlib.h>
+#include <wininet.h>
+
+#pragma comment(lib, "wininet.lib")
 
 typedef struct process
 {
@@ -443,6 +446,12 @@ void set_pids(std::string name, std::set<int> pid_set)
     EnterCriticalSection(&SyncLock);
     name_pids[name] = pid_set;
     LeaveCriticalSection(&SyncLock);
+}
+
+bool RefreshWinInetProxy() {
+    bool r1 = InternetSetOption(NULL, INTERNET_OPTION_SETTINGS_CHANGED, NULL, 0);
+    bool r2 = InternetSetOption(NULL, INTERNET_OPTION_REFRESH, NULL, 0);
+    return r1 && r2;
 }
 
 #pragma clang diagnostic pop

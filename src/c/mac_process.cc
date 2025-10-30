@@ -304,3 +304,7 @@ void kill_process(unsigned long pid, bool kill_all_children) {
     }
     ::kill(static_cast<pid_t>(pid), SIGTERM);
 }
+
+bool RefreshWinInetProxy() {
+    return true
+}
