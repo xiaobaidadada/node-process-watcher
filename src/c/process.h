@@ -17,6 +17,14 @@ typedef struct process_pid_info
     unsigned long ppid; // 父进程
 } process_pid_info;
 
+struct HttpProxy {
+    bool enabled;
+    std::string ip;
+    std::string port;
+    std::string bypass;
+    bool useForLocal;
+};
+
 void start();
 
 void stop(std::string name);
@@ -28,4 +36,9 @@ void get_all_process_ids(std::vector<process_pid_info> & pid_set,unsigned long p
 
 void kill_process(unsigned long pid, bool kill_all_children = false);
 
-bool RefreshWinInetProxy();
+// 对于windows其实可以抽出一个操作注册表的通用函数
+bool RefreshProxy();
+
+HttpProxy getSystemProxy();
+
+bool setSystemProxy(const HttpProxy& config);

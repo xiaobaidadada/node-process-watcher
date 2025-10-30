@@ -349,6 +349,25 @@ void set_pids(std::string name,std::set<int> pid_set) {
     mtx.unlock();  // 释放锁
 }
 
-bool RefreshWinInetProxy() {
+// todo
+bool RefreshProxy() {
     return true;
+}
+
+// todo
+HttpProxy getSystemProxy() {
+    HttpProxy proxy;
+    proxy.enabled = false;
+    proxy.ip = "";
+    proxy.port = "";
+    proxy.bypass = "";
+    proxy.useForLocal = false;
+    return proxy;
+}
+
+// todo
+bool setSystemProxy(const HttpProxy& config) {
+// Mac/Linux暂不实现
+    (void)config; // 防止未使用警告
+    return false;
 }

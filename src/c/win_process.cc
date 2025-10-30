@@ -448,11 +448,105 @@ void set_pids(std::string name, std::set<int> pid_set)
     LeaveCriticalSection(&SyncLock);
 }
 
-bool RefreshWinInetProxy() {
+bool RefreshProxy() {
     bool r1 = InternetSetOption(NULL, INTERNET_OPTION_SETTINGS_CHANGED, NULL, 0);
     bool r2 = InternetSetOption(NULL, INTERNET_OPTION_REFRESH, NULL, 0);
     return r1 && r2;
 }
+
+HttpProxy getSystemProxy() {
+    HttpProxy proxy;
+    proxy.enabled = false;
+    proxy.ip = "";
+    proxy.port = "";
+    proxy.bypass = "";
+    proxy.useForLocal = false;
+
+    HKEY hKey;
+    if (RegOpenKeyExA(HKEY_CURRENT_USER,
+                      "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+                      0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        DWORD enabled = 0, type = 0, size = sizeof(enabled);
+        if (RegQueryValueExA(hKey, "ProxyEnable", nullptr, &type, (LPBYTE)&enabled, &size) == ERROR_SUCCESS) {
+            proxy.enabled = (enabled != 0);
+        }
+
+        char proxyServer[512] = {0};
+        size = sizeof(proxyServer);
+        if (RegQueryValueExA(hKey, "ProxyServer", nullptr, &type, (LPBYTE)proxyServer, &size) == ERROR_SUCCESS) {
+            std::string server(proxyServer);
+            if (server.find("=") != std::string::npos) {
+                // "http=127.0.0.1:7890;https=127.0.0.1:7891"
+                size_t pos = server.find("http=");
+                if (pos != std::string::npos) {
+                    size_t sep = server.find(";", pos);
+                    std::string httpPart = server.substr(pos + 5, sep - pos - 5);
+                    size_t colon = httpPart.find(":");
+                    if (colon != std::string::npos) {
+                        proxy.ip = httpPart.substr(0, colon);
+                        proxy.port = httpPart.substr(colon + 1);
+                    }
+                }
+            } else {
+                // "127.0.0.1:7890"
+                size_t colon = server.find(":");
+                if (colon != std::string::npos) {
+                    proxy.ip = server.substr(0, colon);
+                    proxy.port = server.substr(colon + 1);
+                }
+            }
+        }
+
+        char bypassBuf[512] = {0};
+        size = sizeof(bypassBuf);
+        if (RegQueryValueExA(hKey, "ProxyOverride", nullptr, &type, (LPBYTE)bypassBuf, &size) == ERROR_SUCCESS) {
+            std::string bypassStr(bypassBuf);
+            if (bypassStr.find("<local>") != std::string::npos) {
+                proxy.useForLocal = true;
+                bypassStr.erase(bypassStr.find("<local>"), 7); // 去掉 <local>
+            }
+            proxy.bypass = bypassStr;
+        }
+
+        RegCloseKey(hKey);
+    }
+
+
+    return proxy;
+}
+
+bool setSystemProxy(const HttpProxy& config) {
+    HKEY hKey;
+    if (RegOpenKeyExA(HKEY_CURRENT_USER,
+                      "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+                      0, KEY_SET_VALUE, &hKey) != ERROR_SUCCESS) {
+        return false;
+    }
+
+    if (config.enabled && !config.ip.empty() && !config.port.empty()) {
+        std::string proxyAddr = config.ip + ":" + config.port;
+
+        DWORD enabled = 1;
+        RegSetValueExA(hKey, "ProxyEnable", 0, REG_DWORD, (const BYTE*)&enabled, sizeof(enabled));
+        RegSetValueExA(hKey, "ProxyServer", 0, REG_SZ, (const BYTE*)proxyAddr.c_str(), proxyAddr.size() + 1);
+
+        std::string bypassStr = config.bypass;
+        if (config.useForLocal) {
+            bypassStr = bypassStr.empty() ? "<local>" : bypassStr + ";<local>";
+        }
+        RegSetValueExA(hKey, "ProxyOverride", 0, REG_SZ, (const BYTE*)bypassStr.c_str(), bypassStr.size() + 1);
+
+        RegCloseKey(hKey);
+        return true;
+    } else {
+        DWORD disabled = 0;
+        RegSetValueExA(hKey, "ProxyEnable", 0, REG_DWORD, (const BYTE*)&disabled, sizeof(disabled));
+        RegCloseKey(hKey);
+        return true;
+    }
+
+}
+
 
 #pragma clang diagnostic pop
 

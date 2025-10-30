@@ -209,10 +209,43 @@ void stop_folder_size(const Napi::CallbackInfo &info)
 }
 
 
-Napi::Boolean refresh_winInet_proxy(const Napi::CallbackInfo& info) {
+Napi::Boolean refresh_proxy(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
 
-    bool success = RefreshWinInetProxy();
+    bool success = RefreshProxy();
+    return Napi::Boolean::New(env, success);
+}
+
+Napi::Object get_system_proxy(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    HttpProxy proxy = getSystemProxy();
+
+    Napi::Object obj = Napi::Object::New(env);
+    obj.Set("enabled", Napi::Boolean::New(env, proxy.enabled));
+    obj.Set("ip", Napi::String::New(env, proxy.ip));
+    obj.Set("port", Napi::String::New(env, proxy.port));
+    obj.Set("bypass", Napi::String::New(env, proxy.bypass));
+    obj.Set("useForLocal", Napi::Boolean::New(env, proxy.useForLocal));
+
+    return obj;
+}
+
+Napi::Boolean set_system_proxy(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (info.Length() < 1 || !info[0].IsObject()) {
+        Napi::TypeError::New(env, "Expected an object parameter").ThrowAsJavaScriptException();
+        return Napi::Boolean::New(env, false);
+    }
+
+    Napi::Object obj = info[0].As<Napi::Object>();
+    HttpProxy config;
+    config.enabled = obj.Has("enabled") && obj.Get("enabled").As<Napi::Boolean>().Value();
+    config.ip = obj.Has("ip") ? obj.Get("ip").As<Napi::String>().Utf8Value() : "";
+    config.port = obj.Has("port") ? obj.Get("port").As<Napi::String>().Utf8Value() : "";
+    config.bypass = obj.Has("bypass") ? obj.Get("bypass").As<Napi::String>().Utf8Value() : "";
+    config.useForLocal = obj.Has("useForLocal") && obj.Get("useForLocal").As<Napi::Boolean>().Value();
+
+    bool success = setSystemProxy(config);
     return Napi::Boolean::New(env, success);
 }
 
@@ -234,8 +267,12 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
               Napi::Function::New(env, on_folder_size));
     exports.Set(Napi::String::New(env, "stop_folder_size"),
               Napi::Function::New(env, stop_folder_size));
-  exports.Set(Napi::String::New(env, "refresh_winInet_proxy"),
-            Napi::Function::New(env, refresh_winInet_proxy));
+    exports.Set(Napi::String::New(env, "refresh_proxy"),
+            Napi::Function::New(env, refresh_proxy));
+    exports.Set(Napi::String::New(env, "get_system_proxy"),
+                Napi::Function::New(env, get_system_proxy));
+    exports.Set(Napi::String::New(env, "set_system_proxy"),
+                    Napi::Function::New(env, set_system_proxy));
     return exports;
 }
 

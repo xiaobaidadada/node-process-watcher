@@ -34,29 +34,43 @@ export interface node_process_watcher {
      * get sys all pid  获取系统所有的进程pid信息
      * @param ppid
      */
-    get_all_pid(ppid?: number): {pid:number, cpu:number ,ppid:number}[];
+    get_all_pid(ppid?: number): { pid: number, cpu: number, ppid: number }[];
 
     /**
      * kill process 可以关闭所有的子进程
      * @param pid
      * @param kill_all_children default false
      */
-    kill_process(pid:number,kill_all_children ?: boolean): void;
+    kill_process(pid: number, kill_all_children ?: boolean): void;
 
     /**
      * 使用子线程遍历全部的文件与数量
      * @param folder_name
      * @param on
      */
-    on_folder_size(folder_name:string,on:(file_num:number,total_size:number)=>void);
+    on_folder_size(folder_name: string, on: (file_num: number, total_size: number) => void);
 
     /**
      * 停止对某个目录的数量统计
      * @param folder_name
      */
-    stop_folder_size(folder_name:string);
+    stop_folder_size(folder_name: string);
 
-    refresh_winInet_proxy():boolean;
+    refresh_proxy(): boolean;
+
+    get_system_proxy(): {
+        enabled: boolean
+        ip: boolean
+        port: number
+        bypass?: string
+        useForLocal?: boolean};
+
+    set_system_proxy(data:{
+        enabled: boolean
+        ip: boolean
+        port: number
+        bypass?: string
+        useForLocal?: boolean}):boolean;
 }
 
-export declare const node_process_watcher:node_process_watcher;
+export declare const node_process_watcher: node_process_watcher;
