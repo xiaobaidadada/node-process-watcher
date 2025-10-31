@@ -458,7 +458,7 @@ HttpProxy getSystemProxyForWindows() {
     HttpProxy proxy;
     proxy.enabled = false;
     proxy.ip = "";
-    proxy.port = "";
+    proxy.port = 0;
     proxy.bypass = "";
     proxy.useForLocal = false;
 
@@ -493,7 +493,7 @@ HttpProxy getSystemProxyForWindows() {
                 size_t colon = server.find(":");
                 if (colon != std::string::npos) {
                     proxy.ip = server.substr(0, colon);
-                    std::string portStr = httpPart.substr(colon + 1);
+                    std::string portStr = server.substr(colon + 1);
                     proxy.port = std::stoi(portStr);
                 }
             }
