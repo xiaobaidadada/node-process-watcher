@@ -79,7 +79,7 @@ export interface node_process_watcher {
             type: number // 1 http, 2 https
             enabled: boolean
             ip: string
-            port: string
+            port: number
             bypass?: string
             useForLocal?: boolean
         }[]
@@ -92,7 +92,7 @@ export interface node_process_watcher {
             type: number // 1 http, 2 https
             enabled: boolean
             ip: string
-            port: string
+            port: number
             bypass?: string
             useForLocal?: boolean
         }[]
