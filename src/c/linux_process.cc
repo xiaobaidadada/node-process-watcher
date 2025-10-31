@@ -237,7 +237,7 @@ void send_data_to_on() {
     for (const  auto& name : name_set) {
         Napi::ThreadSafeFunction  tsfn = name_tsfn[name];
         std::set<int> pid_set = name_pids[name];
-        tsfn.BlockingCall([process_list,process_count,pid_set](Napi::Env env, Napi::Function jsCallback) {
+        tsfn.BlockingCall([pid_set](Napi::Env env, Napi::Function jsCallback) {
             // 但是这里是可以使用 env的
             Napi::HandleScope scope(Napi::Env);
             Napi::Array  list = Napi::Array::New(env);
@@ -299,7 +299,9 @@ void get_all_process_ids(std::vector<process_pid_info> & pid_set,unsigned long p
                 {
                     continue;
                 }
-                process_pid_info info = {pid, procInfo.ppid};
+                process_pid_info info; // 使用隐式生成的默认构造函数
+                info.pid = pid;
+                info.ppid = procInfo.ppid;
                 pid_set.push_back(info);
             }
         }
@@ -347,27 +349,4 @@ void set_pids(std::string name,std::set<int> pid_set) {
     mtx.lock();  // 尝试获取锁
     name_pids[name] = pid_set;
     mtx.unlock();  // 释放锁
-}
-
-// todo
-bool RefreshProxy() {
-    return true;
-}
-
-// todo
-HttpProxy getSystemProxy() {
-    HttpProxy proxy;
-    proxy.enabled = false;
-    proxy.ip = "";
-    proxy.port = "";
-    proxy.bypass = "";
-    proxy.useForLocal = false;
-    return proxy;
-}
-
-// todo
-bool setSystemProxy(const HttpProxy& config) {
-// Mac/Linux暂不实现
-    (void)config; // 防止未使用警告
-    return false;
 }

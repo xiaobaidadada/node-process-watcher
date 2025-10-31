@@ -56,21 +56,48 @@ export interface node_process_watcher {
      */
     stop_folder_size(folder_name: string);
 
-    refresh_proxy(): boolean;
 
-    get_system_proxy(): {
+    get_system_proxy_for_windows(): {
         enabled: boolean
         ip: boolean
         port: number
         bypass?: string
-        useForLocal?: boolean};
+        useForLocal?: boolean
+    };
 
-    set_system_proxy(data:{
+    set_system_proxy_for_windows(data: {
         enabled: boolean
         ip: boolean
         port: number
         bypass?: string
-        useForLocal?: boolean}):boolean;
+        useForLocal?: boolean
+    }): boolean;
+
+    get_system_proxy_for_mac(): {
+        name: string
+        proxies: {
+            type: number // 1 http, 2 https
+            enabled: boolean
+            ip: string
+            port: string
+            bypass?: string
+            useForLocal?: boolean
+        }
+        bypass?: string
+    }[];
+
+    set_system_proxy_for_mac(data: {
+        name: string
+        proxies: {
+            type: number // 1 http, 2 https
+            enabled: boolean
+            ip: string
+            port: string
+            bypass?: string
+            useForLocal?: boolean
+        }
+        bypass?: string
+    }[]): boolean;
 }
 
 export declare const node_process_watcher: node_process_watcher;

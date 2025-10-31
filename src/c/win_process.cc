@@ -454,7 +454,7 @@ bool RefreshProxy() {
     return r1 && r2;
 }
 
-HttpProxy getSystemProxy() {
+HttpProxy getSystemProxyForWindows() {
     HttpProxy proxy;
     proxy.enabled = false;
     proxy.ip = "";
@@ -515,7 +515,7 @@ HttpProxy getSystemProxy() {
     return proxy;
 }
 
-bool setSystemProxy(const HttpProxy& config) {
+bool setSystemProxyForWindows(const HttpProxy& config) {
     HKEY hKey;
     if (RegOpenKeyExA(HKEY_CURRENT_USER,
                       "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
@@ -537,11 +537,13 @@ bool setSystemProxy(const HttpProxy& config) {
         RegSetValueExA(hKey, "ProxyOverride", 0, REG_SZ, (const BYTE*)bypassStr.c_str(), bypassStr.size() + 1);
 
         RegCloseKey(hKey);
+        RefreshProxy();
         return true;
     } else {
         DWORD disabled = 0;
         RegSetValueExA(hKey, "ProxyEnable", 0, REG_DWORD, (const BYTE*)&disabled, sizeof(disabled));
         RegCloseKey(hKey);
+        RefreshProxy();
         return true;
     }
 

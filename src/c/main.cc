@@ -180,15 +180,15 @@ uintmax_t get_directory_size(std::string dir,Napi::ThreadSafeFunction tsfn) {
 void on_folder_size(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    Napi::HandleScope scope(env); 
+    Napi::HandleScope scope(env);
     Napi::String folder_name = info[0].As<Napi::String>();
     Napi::Function on_handler = info[1].As<Napi::Function>();
     Napi::ThreadSafeFunction tsfn = Napi::ThreadSafeFunction::New(
             env,
-            on_handler,  
-            "ChildThread",                  
-            0,                              
-            1                              
+            on_handler,
+            "ChildThread",
+            0,
+            1
     );
     // fs::path dir(folder_name.Utf8Value());
     std::string dir  =  folder_name.Utf8Value();
@@ -203,34 +203,12 @@ void on_folder_size(const Napi::CallbackInfo &info)
 void stop_folder_size(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    Napi::HandleScope scope(env); 
+    Napi::HandleScope scope(env);
     Napi::String folder_name = info[0].As<Napi::String>();
     thread_id_set.erase(folder_name.Utf8Value());
 }
 
-
-Napi::Boolean refresh_proxy(const Napi::CallbackInfo& info) {
-    Napi::Env env = info.Env();
-
-    bool success = RefreshProxy();
-    return Napi::Boolean::New(env, success);
-}
-
-Napi::Object get_system_proxy(const Napi::CallbackInfo& info) {
-    Napi::Env env = info.Env();
-    HttpProxy proxy = getSystemProxy();
-
-    Napi::Object obj = Napi::Object::New(env);
-    obj.Set("enabled", Napi::Boolean::New(env, proxy.enabled));
-    obj.Set("ip", Napi::String::New(env, proxy.ip));
-    obj.Set("port", Napi::String::New(env, proxy.port));
-    obj.Set("bypass", Napi::String::New(env, proxy.bypass));
-    obj.Set("useForLocal", Napi::Boolean::New(env, proxy.useForLocal));
-
-    return obj;
-}
-
-Napi::Boolean set_system_proxy(const Napi::CallbackInfo& info) {
+Napi::Boolean set_system_proxy_for_windows(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     if (info.Length() < 1 || !info[0].IsObject()) {
         Napi::TypeError::New(env, "Expected an object parameter").ThrowAsJavaScriptException();
@@ -241,13 +219,123 @@ Napi::Boolean set_system_proxy(const Napi::CallbackInfo& info) {
     HttpProxy config;
     config.enabled = obj.Has("enabled") && obj.Get("enabled").As<Napi::Boolean>().Value();
     config.ip = obj.Has("ip") ? obj.Get("ip").As<Napi::String>().Utf8Value() : "";
-    config.port = obj.Has("port") ? obj.Get("port").As<Napi::String>().Utf8Value() : "";
+    config.port = obj.Has("port") ? obj.Get("port").As<Napi::Number>().Int32Value() : 0;
     config.bypass = obj.Has("bypass") ? obj.Get("bypass").As<Napi::String>().Utf8Value() : "";
     config.useForLocal = obj.Has("useForLocal") && obj.Get("useForLocal").As<Napi::Boolean>().Value();
 
-    bool success = setSystemProxy(config);
+    bool success = setSystemProxyForWindows(config);
     return Napi::Boolean::New(env, success);
 }
+
+
+Napi::Object get_system_proxy_for_windows(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    HttpProxy proxy = getSystemProxyForWindows();
+
+    Napi::Object obj = Napi::Object::New(env);
+    obj.Set("enabled", Napi::Boolean::New(env, proxy.enabled));
+    obj.Set("ip", Napi::String::New(env, proxy.ip));
+    obj.Set("port", Napi::Number::New(env, proxy.port));
+    obj.Set("bypass", Napi::String::New(env, proxy.bypass));
+    obj.Set("useForLocal", Napi::Boolean::New(env, proxy.useForLocal));
+
+    return obj;
+}
+
+// 转换 HttpProxy -> Napi::Object
+Napi::Object HttpProxyToObject(Napi::Env env, const HttpProxy& proxy) {
+    Napi::Object obj = Napi::Object::New(env);
+    obj.Set("enabled", Napi::Boolean::New(env, proxy.enabled));
+    obj.Set("ip", Napi::String::New(env, proxy.ip));
+    obj.Set("port", Napi::Number::New(env, proxy.port));
+    obj.Set("type", Napi::Number::New(env, proxy.type));
+    // obj.Set("interfaceName", Napi::String::New(env, proxy.interfaceName));
+    return obj;
+}
+
+// 转换 MacHttpProxy -> Napi::Object
+Napi::Object MacHttpProxyToObject(Napi::Env env, const MacHttpProxy& proxy) {
+    Napi::Object obj = Napi::Object::New(env);
+    obj.Set("name", Napi::String::New(env, proxy.name));
+    obj.Set("bypass", Napi::String::New(env, proxy.bypass));
+
+    Napi::Array proxyArray = Napi::Array::New(env, proxy.proxies.size());
+    for (size_t i = 0; i < proxy.proxies.size(); ++i) {
+        proxyArray[i] = HttpProxyToObject(env, proxy.proxies[i]);
+    }
+    obj.Set("proxies", proxyArray);
+    return obj;
+}
+
+// 获取 macOS 当前代理（返回单个对象，包含多个 HttpProxy）
+Napi::Array get_system_proxy_for_mac(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+
+    std::vector<MacHttpProxy> allProxies = getAllMacProxies();
+    Napi::Array result = Napi::Array::New(env, allProxies.size());
+
+    for (size_t i = 0; i < allProxies.size(); ++i) {
+        result[i] = MacHttpProxyToObject(env, allProxies[i]);
+    }
+
+    return result;
+}
+
+
+// 设置 macOS 网络代理（接收 MacHttpProxy 对象）
+Napi::Boolean set_system_proxy_for_mac(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+
+    // 参数必须是数组
+    if (info.Length() < 1 || !info[0].IsArray()) {
+        Napi::TypeError::New(env, "Expected an array of MacHttpProxy objects").ThrowAsJavaScriptException();
+        return Napi::Boolean::New(env, false);
+    }
+
+    Napi::Array inputArr = info[0].As<Napi::Array>();
+    std::vector<MacHttpProxy> macProxies;
+
+    for (uint32_t i = 0; i < inputArr.Length(); ++i) {
+        Napi::Value val = inputArr[i];
+        if (!val.IsObject()) continue;
+
+        Napi::Object macObj = val.As<Napi::Object>();
+        MacHttpProxy macProxy;
+
+        // name 是必须的（如 Wi-Fi / Ethernet）
+        macProxy.name = macObj.Has("name") ? macObj.Get("name").As<Napi::String>().Utf8Value() : "";
+        macProxy.bypass = macObj.Has("bypass") ? macObj.Get("bypass").As<Napi::String>().Utf8Value() : "";
+
+        // proxies 数组
+        if (macObj.Has("proxies") && macObj.Get("proxies").IsArray()) {
+            Napi::Array proxyArr = macObj.Get("proxies").As<Napi::Array>();
+            for (uint32_t j = 0; j < proxyArr.Length(); ++j) {
+                Napi::Value pVal = proxyArr[j];
+                if (!pVal.IsObject()) continue;
+
+                Napi::Object pObj = pVal.As<Napi::Object>();
+                HttpProxy proxy;
+
+                proxy.enabled = pObj.Has("enabled") && pObj.Get("enabled").As<Napi::Boolean>().Value();
+                proxy.ip = pObj.Has("ip") ? pObj.Get("ip").As<Napi::String>().Utf8Value() : "";
+                proxy.port = pObj.Has("port") ? pObj.Get("port").As<Napi::Number>().Int32Value() : 0;
+                proxy.type = pObj.Has("type") ? pObj.Get("type").As<Napi::Number>().Int32Value() : 1;
+                proxy.bypass = "";
+                proxy.useForLocal = false;
+
+                macProxy.proxies.push_back(proxy);
+            }
+        }
+
+        macProxies.push_back(macProxy);
+    }
+
+    // 传给底层执行系统代理修改
+    bool success = setMacProxies(macProxies);
+    return Napi::Boolean::New(env, success);
+}
+
+
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
     // 设置函数
@@ -267,12 +355,15 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
               Napi::Function::New(env, on_folder_size));
     exports.Set(Napi::String::New(env, "stop_folder_size"),
               Napi::Function::New(env, stop_folder_size));
-    exports.Set(Napi::String::New(env, "refresh_proxy"),
-            Napi::Function::New(env, refresh_proxy));
-    exports.Set(Napi::String::New(env, "get_system_proxy"),
-                Napi::Function::New(env, get_system_proxy));
-    exports.Set(Napi::String::New(env, "set_system_proxy"),
-                    Napi::Function::New(env, set_system_proxy));
+    exports.Set(Napi::String::New(env, "get_system_proxy_for_windows"),
+                Napi::Function::New(env, get_system_proxy_for_windows));
+    exports.Set(Napi::String::New(env, "set_system_proxy_for_windows"),
+                    Napi::Function::New(env, set_system_proxy_for_windows));
+    exports.Set(Napi::String::New(env, "get_system_proxy_for_mac"),
+            Napi::Function::New(env, get_system_proxy_for_mac));
+    exports.Set(Napi::String::New(env, "set_system_proxy_for_mac"),
+            Napi::Function::New(env, set_system_proxy_for_mac));
+
     return exports;
 }
 
