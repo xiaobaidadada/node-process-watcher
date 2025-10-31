@@ -82,7 +82,7 @@ export interface node_process_watcher {
             port: string
             bypass?: string
             useForLocal?: boolean
-        }
+        }[]
         bypass?: string
     }[];
 
@@ -95,7 +95,7 @@ export interface node_process_watcher {
             port: string
             bypass?: string
             useForLocal?: boolean
-        }
+        }[]
         bypass?: string
     }[]): boolean;
 }
