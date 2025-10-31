@@ -8,7 +8,7 @@ const wifi_u = {
     "name": "Wi-Fi",
     "bypass": ".qq.com,.molardata.com,.zhihu.com,.csdn.com,.xiaohei,.bing.com,.feishu.cn,14.103.0.0/16,.abaka.ai,.figma.com,.ai-transsion.com,.aliyuncs.com,192.168.41.57,.csdn.net,.xiaohei123.fun",
     "proxies": [
-        {"enabled": true, "ip": "127.0.0.1", "port": 3067, "type": 1},
+        {"enabled": false, "ip": "127.0.0.1", "port": 3067, "type": 1},
         {
         "enabled": true,
         "ip": "192.168.34.247",

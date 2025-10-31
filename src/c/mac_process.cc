@@ -437,8 +437,8 @@ bool setMacProxies(const std::vector<MacHttpProxy> &proxies) {
     if (status != errAuthorizationSuccess || !auth) return false;
 
     // 请求修改系统配置权限 出现弹窗
-    AuthorizationItem right = { kAuthorizationRightExecute, 0, nullptr, 0 };
-    AuthorizationRights rights = { 1, &right };
+    AuthorizationItem right = {kAuthorizationRightExecute, 0, nullptr, 0};
+    AuthorizationRights rights = {1, &right};
 
     status = AuthorizationCopyRights(auth, &rights, nullptr,
                                      kAuthorizationFlagInteractionAllowed |
@@ -452,9 +452,9 @@ bool setMacProxies(const std::vector<MacHttpProxy> &proxies) {
 
     // 使用授权创建 SCPreferences
     SCPreferencesRef prefs = SCPreferencesCreateWithAuthorization(NULL,
-                                                                   CFSTR("MyAppProxy"),
-                                                                   NULL,
-                                                                   auth);
+                                                                  CFSTR("MyAppProxy"),
+                                                                  NULL,
+                                                                  auth);
     if (!prefs) {
         AuthorizationFree(auth, kAuthorizationFlagDefaults);
         return false;
@@ -485,9 +485,9 @@ bool setMacProxies(const std::vector<MacHttpProxy> &proxies) {
 
     CFIndex count = CFArrayGetCount(services);
 
-    for (const auto &macProxy : proxies) {
+    for (const auto &macProxy: proxies) {
         for (CFIndex i = 0; i < count; ++i) {
-            SCNetworkServiceRef service = (SCNetworkServiceRef)CFArrayGetValueAtIndex(services, i);
+            SCNetworkServiceRef service = (SCNetworkServiceRef) CFArrayGetValueAtIndex(services, i);
             if (!SCNetworkServiceGetEnabled(service)) continue;
 
             CFStringRef nameRef = SCNetworkServiceGetName(service);
@@ -504,41 +504,37 @@ bool setMacProxies(const std::vector<MacHttpProxy> &proxies) {
 
             CFDictionaryRef oldDict = SCNetworkProtocolGetConfiguration(proto);
             CFMutableDictionaryRef newDict = oldDict
-                ? CFDictionaryCreateMutableCopy(NULL, 0, oldDict)
-                : CFDictionaryCreateMutable(NULL, 0,
-                      &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+                                                 ? CFDictionaryCreateMutableCopy(NULL, 0, oldDict)
+                                                 : CFDictionaryCreateMutable(NULL, 0,
+                                                                             &kCFTypeDictionaryKeyCallBacks,
+                                                                             &kCFTypeDictionaryValueCallBacks);
 
-            for (const auto &proxy : macProxy.proxies) {
+            for (const auto &proxy: macProxy.proxies) {
                 int enabledVal = proxy.enabled ? 1 : 0;
                 CFNumberRef enabledRef = CFNumberCreate(NULL, kCFNumberIntType, &enabledVal);
 
                 if (proxy.type == 1) {
                     CFDictionarySetValue(newDict, kSCPropNetProxiesHTTPEnable, enabledRef);
-                    if (proxy.enabled) {
-                        CFStringRef hostRef = CFStringCreateWithCString(NULL, proxy.ip.c_str(), kCFStringEncodingUTF8);
-                        CFNumberRef portRef = CFNumberCreate(NULL, kCFNumberIntType, &proxy.port);
-                        CFDictionarySetValue(newDict, kSCPropNetProxiesHTTPProxy, hostRef);
-                        CFDictionarySetValue(newDict, kSCPropNetProxiesHTTPPort, portRef);
-                        CFRelease(hostRef);
-                        CFRelease(portRef);
-                    } else {
-                        CFDictionaryRemoveValue(newDict, kSCPropNetProxiesHTTPProxy);
-                        CFDictionaryRemoveValue(newDict, kSCPropNetProxiesHTTPPort);
-                    }
+                    CFStringRef hostRef = CFStringCreateWithCString(NULL, proxy.ip.c_str(), kCFStringEncodingUTF8);
+                    CFNumberRef portRef = CFNumberCreate(NULL, kCFNumberIntType, &proxy.port);
+
+                    CFDictionarySetValue(newDict, kSCPropNetProxiesHTTPProxy, hostRef);
+                    CFDictionarySetValue(newDict, kSCPropNetProxiesHTTPPort, portRef);
+
+                    CFRelease(hostRef);
+                    CFRelease(portRef);
                 } else if (proxy.type == 2) {
                     CFDictionarySetValue(newDict, kSCPropNetProxiesHTTPSEnable, enabledRef);
-                    if (proxy.enabled) {
-                        CFStringRef hostRef = CFStringCreateWithCString(NULL, proxy.ip.c_str(), kCFStringEncodingUTF8);
-                        CFNumberRef portRef = CFNumberCreate(NULL, kCFNumberIntType, &proxy.port);
-                        CFDictionarySetValue(newDict, kSCPropNetProxiesHTTPSProxy, hostRef);
-                        CFDictionarySetValue(newDict, kSCPropNetProxiesHTTPSPort, portRef);
-                        CFRelease(hostRef);
-                        CFRelease(portRef);
-                    } else {
-                        CFDictionaryRemoveValue(newDict, kSCPropNetProxiesHTTPSProxy);
-                        CFDictionaryRemoveValue(newDict, kSCPropNetProxiesHTTPSPort);
-                    }
+                    CFStringRef hostRef = CFStringCreateWithCString(NULL, proxy.ip.c_str(), kCFStringEncodingUTF8);
+                    CFNumberRef portRef = CFNumberCreate(NULL, kCFNumberIntType, &proxy.port);
+
+                    CFDictionarySetValue(newDict, kSCPropNetProxiesHTTPSProxy, hostRef);
+                    CFDictionarySetValue(newDict, kSCPropNetProxiesHTTPSPort, portRef);
+
+                    CFRelease(hostRef);
+                    CFRelease(portRef);
                 }
+
 
                 CFRelease(enabledRef);
             }
@@ -571,8 +567,8 @@ HttpProxy getSystemProxy() {
     return proxy;
 }
 
-bool setSystemProxy(const HttpProxy& config) {
+bool setSystemProxy(const HttpProxy &config) {
     // Mac/Linux暂不实现
-    (void)config; // 防止未使用警告
+    (void) config; // 防止未使用警告
     return false;
 }
