@@ -484,7 +484,8 @@ HttpProxy getSystemProxyForWindows() {
                     size_t colon = httpPart.find(":");
                     if (colon != std::string::npos) {
                         proxy.ip = httpPart.substr(0, colon);
-                        proxy.port = httpPart.substr(colon + 1);
+                        std::string portStr = httpPart.substr(colon + 1);
+                        proxy.port = std::stoi(portStr);
                     }
                 }
             } else {
@@ -492,7 +493,8 @@ HttpProxy getSystemProxyForWindows() {
                 size_t colon = server.find(":");
                 if (colon != std::string::npos) {
                     proxy.ip = server.substr(0, colon);
-                    proxy.port = server.substr(colon + 1);
+                    std::string portStr = httpPart.substr(colon + 1);
+                    proxy.port = std::stoi(portStr);
                 }
             }
         }
@@ -524,7 +526,7 @@ bool setSystemProxyForWindows(const HttpProxy& config) {
     }
 
     if (config.enabled && !config.ip.empty() && !config.port.empty()) {
-        std::string proxyAddr = config.ip + ":" + config.port;
+        std::string proxyAddr = config.ip + ":" + std::to_string(config.port);
 
         DWORD enabled = 1;
         RegSetValueExA(hKey, "ProxyEnable", 0, REG_DWORD, (const BYTE*)&enabled, sizeof(enabled));
