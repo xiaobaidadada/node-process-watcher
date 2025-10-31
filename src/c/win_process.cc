@@ -552,6 +552,16 @@ bool setSystemProxyForWindows(const HttpProxy& config) {
 }
 
 
+bool setMacProxies(const std::vector<MacHttpProxy> &proxies) {
+    return true;
+}
+
+
+std::vector<MacHttpProxy> getAllMacProxies() {
+    std::vector<MacHttpProxy> result;
+    return result;
+}
+
 #pragma clang diagnostic pop
 
 #endif

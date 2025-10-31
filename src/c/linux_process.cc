@@ -350,3 +350,31 @@ void set_pids(std::string name,std::set<int> pid_set) {
     name_pids[name] = pid_set;
     mtx.unlock();  // 释放锁
 }
+
+
+bool setMacProxies(const std::vector<MacHttpProxy> &proxies) {
+    return true;
+}
+
+
+std::vector<MacHttpProxy> getAllMacProxies() {
+    std::vector<MacHttpProxy> result;
+    return result;
+}
+
+
+HttpProxy getSystemProxy() {
+    HttpProxy proxy;
+    proxy.enabled = false;
+    proxy.ip = "";
+    proxy.port = 0;
+    proxy.bypass = "";
+    proxy.useForLocal = false;
+    return proxy;
+}
+
+bool setSystemProxy(const HttpProxy& config) {
+    // Mac/Linux暂不实现
+    (void)config; // 防止未使用警告
+    return false;
+}
