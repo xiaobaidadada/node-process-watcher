@@ -525,7 +525,7 @@ bool setSystemProxyForWindows(const HttpProxy& config) {
         return false;
     }
 
-    if (config.enabled && !config.ip.empty() && !config.port.empty()) {
+    if (config.enabled && !config.ip.empty() && config.port != 0) {
         std::string proxyAddr = config.ip + ":" + std::to_string(config.port);
 
         DWORD enabled = 1;
