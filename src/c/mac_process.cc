@@ -509,6 +509,7 @@ bool setMacProxies(const std::vector<MacHttpProxy> &proxies) {
                                                                              &kCFTypeDictionaryKeyCallBacks,
                                                                              &kCFTypeDictionaryValueCallBacks);
 
+            // 设置 HTTP/HTTPS 代理
             for (const auto &proxy: macProxy.proxies) {
                 int enabledVal = proxy.enabled ? 1 : 0;
                 CFNumberRef enabledRef = CFNumberCreate(NULL, kCFNumberIntType, &enabledVal);
@@ -517,26 +518,46 @@ bool setMacProxies(const std::vector<MacHttpProxy> &proxies) {
                     CFDictionarySetValue(newDict, kSCPropNetProxiesHTTPEnable, enabledRef);
                     CFStringRef hostRef = CFStringCreateWithCString(NULL, proxy.ip.c_str(), kCFStringEncodingUTF8);
                     CFNumberRef portRef = CFNumberCreate(NULL, kCFNumberIntType, &proxy.port);
-
                     CFDictionarySetValue(newDict, kSCPropNetProxiesHTTPProxy, hostRef);
                     CFDictionarySetValue(newDict, kSCPropNetProxiesHTTPPort, portRef);
-
                     CFRelease(hostRef);
                     CFRelease(portRef);
                 } else if (proxy.type == 2) {
                     CFDictionarySetValue(newDict, kSCPropNetProxiesHTTPSEnable, enabledRef);
                     CFStringRef hostRef = CFStringCreateWithCString(NULL, proxy.ip.c_str(), kCFStringEncodingUTF8);
                     CFNumberRef portRef = CFNumberCreate(NULL, kCFNumberIntType, &proxy.port);
-
                     CFDictionarySetValue(newDict, kSCPropNetProxiesHTTPSProxy, hostRef);
                     CFDictionarySetValue(newDict, kSCPropNetProxiesHTTPSPort, portRef);
-
                     CFRelease(hostRef);
                     CFRelease(portRef);
                 }
 
-
                 CFRelease(enabledRef);
+            }
+
+            // ✅ 设置代理绕过（bypass）
+            if (!macProxy.bypass.empty()) {
+                std::vector<CFStringRef> bypassItems;
+                std::stringstream ss(macProxy.bypass);
+                std::string item;
+                while (std::getline(ss, item, ',')) {
+                    if (!item.empty()) {
+                        CFStringRef cfItem = CFStringCreateWithCString(NULL, item.c_str(), kCFStringEncodingUTF8);
+                        if (cfItem) bypassItems.push_back(cfItem);
+                    }
+                }
+
+                CFArrayRef bypassArray = CFArrayCreate(NULL,
+                                                       (const void **)bypassItems.data(),
+                                                       bypassItems.size(),
+                                                       &kCFTypeArrayCallBacks);
+                CFDictionarySetValue(newDict, kSCPropNetProxiesExceptionsList, bypassArray);
+                CFRelease(bypassArray);
+
+                for (auto cf : bypassItems) CFRelease(cf);
+            } else {
+                // 没有绕过配置时移除
+                CFDictionaryRemoveValue(newDict, kSCPropNetProxiesExceptionsList);
             }
 
             SCNetworkProtocolSetConfiguration(proto, newDict);
@@ -555,6 +576,7 @@ bool setMacProxies(const std::vector<MacHttpProxy> &proxies) {
 
     return ok;
 }
+
 
 
 HttpProxy getSystemProxy() {
