@@ -562,6 +562,39 @@ std::vector<MacHttpProxy> getAllMacProxies() {
     return result;
 }
 
+bool is_current_user_admin() {
+    BOOL isAdmin = FALSE;
+    HANDLE hToken = NULL;
+    // 首先尝试使用当前线程令牌，否则使用进程令牌
+    if (!OpenThreadToken(GetCurrentThread(), TOKEN_QUERY, TRUE, &hToken)) {
+        if (GetLastError() == ERROR_NO_TOKEN) {
+            if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    BYTE adminSidBuffer[SECURITY_MAX_SID_SIZE];
+    PSID pAdminSid = (PSID)adminSidBuffer;
+    DWORD sidSize = sizeof(adminSidBuffer);
+    if (!CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, pAdminSid, &sidSize)) {
+        if (hToken) CloseHandle(hToken);
+        return false;
+    }
+
+    BOOL isMember = FALSE;
+    if (!CheckTokenMembership(hToken, pAdminSid, &isMember)) {
+        if (hToken) CloseHandle(hToken);
+        return false;
+    }
+    if (hToken) CloseHandle(hToken);
+    isAdmin = isMember;
+    return isAdmin == TRUE;
+    return false;
+}
+
 #pragma clang diagnostic pop
 
 #endif

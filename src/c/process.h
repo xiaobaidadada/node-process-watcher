@@ -50,3 +50,5 @@ bool setSystemProxyForWindows(const HttpProxy &config);
 // mac下
 std::vector<MacHttpProxy> getAllMacProxies();
 bool setMacProxies(const std::vector<MacHttpProxy> &proxies);
+
+bool is_current_user_admin();

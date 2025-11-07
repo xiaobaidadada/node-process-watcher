@@ -98,6 +98,11 @@ export interface node_process_watcher {
         }[]
         bypass?: string
     }[]): boolean;
+
+    /**
+     * 判断当前进程是否以管理员/root权限运行
+     */
+    is_admin(): boolean;
 }
 
 export declare const node_process_watcher: node_process_watcher;

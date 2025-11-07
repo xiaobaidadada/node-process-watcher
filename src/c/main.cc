@@ -134,6 +134,13 @@ void kill (const Napi::CallbackInfo &info)
     kill_process(info[0].As<Napi::Number>().Int64Value(), info.Length() ==1 ? false: info[1].As<Napi::Boolean>().Value());
 }
 
+Napi::Boolean is_admin(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    bool ok = is_current_user_admin();
+    return Napi::Boolean::New(env, ok);
+}
+
 uintmax_t get_directory_size(std::string dir,Napi::ThreadSafeFunction tsfn) {
     const fs::path& root(dir);
     if (!fs::exists(root) || !fs::is_directory(root)) {
@@ -355,6 +362,8 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
               Napi::Function::New(env, on_folder_size));
     exports.Set(Napi::String::New(env, "stop_folder_size"),
               Napi::Function::New(env, stop_folder_size));
+    exports.Set(Napi::String::New(env, "is_admin"),
+              Napi::Function::New(env, is_admin));
     exports.Set(Napi::String::New(env, "get_system_proxy_for_windows"),
                 Napi::Function::New(env, get_system_proxy_for_windows));
     exports.Set(Napi::String::New(env, "set_system_proxy_for_windows"),

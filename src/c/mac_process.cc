@@ -594,3 +594,7 @@ bool setSystemProxy(const HttpProxy &config) {
     (void) config; // 防止未使用警告
     return false;
 }
+
+bool is_current_user_admin() {
+    return geteuid() == 0;
+}

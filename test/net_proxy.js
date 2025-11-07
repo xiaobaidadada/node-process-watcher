@@ -17,8 +17,10 @@ const wifi_u = {
     }]
 }
 
-node_process_watcher.set_system_proxy_for_mac([wifi_u])
+// node_process_watcher.set_system_proxy_for_mac([wifi_u])
+//
+// let pojo1 = node_process_watcher.get_system_proxy_for_mac()
+// let wifi1 = pojo1.filter(v => v.name === "Wi-Fi")
+// console.log(JSON.stringify(wifi1))
 
-let pojo1 = node_process_watcher.get_system_proxy_for_mac()
-let wifi1 = pojo1.filter(v => v.name === "Wi-Fi")
-console.log(JSON.stringify(wifi1))
+console.log(node_process_watcher.is_admin())
