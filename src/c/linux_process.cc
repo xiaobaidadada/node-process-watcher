@@ -379,6 +379,23 @@ bool setSystemProxy(const HttpProxy& config) {
     return false;
 }
 
+// Windows 特定函数的存根实现（Linux 下不实现，仅用于链接）
+HttpProxy getSystemProxyForWindows() {
+    HttpProxy proxy;
+    proxy.enabled = false;
+    proxy.ip = "";
+    proxy.port = 0;
+    proxy.bypass = "";
+    proxy.useForLocal = false;
+    return proxy;
+}
+
+bool setSystemProxyForWindows(const HttpProxy& config) {
+    // Linux 下不实现 Windows 代理设置
+    (void)config; // 防止未使用警告
+    return false;
+}
+
 bool is_current_user_admin() {
     return geteuid() == 0;
 }
