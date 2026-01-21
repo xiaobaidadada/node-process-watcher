@@ -20,8 +20,12 @@
 #include <algorithm> // 包含了min函数
 #include <stdlib.h>
 #include <wininet.h>
+#include <wtsapi32.h>
+#include <userenv.h>
 
 #pragma comment(lib, "wininet.lib")
+#pragma comment(lib, "Wtsapi32.lib")
+#pragma comment(lib, "Userenv.lib")
 
 typedef struct process
 {
@@ -594,6 +598,63 @@ bool is_current_user_admin() {
     return isAdmin == TRUE;
     return false;
 }
+
+bool LaunchProcessAsUser(const std::wstring& exePath) {
+    DWORD sessionId = WTSGetActiveConsoleSessionId();
+    if (sessionId == 0xFFFFFFFF) return false;
+
+    HANDLE userToken = NULL;
+    if (!WTSQueryUserToken(sessionId, &userToken)) return false;
+
+    HANDLE primaryToken = NULL;
+    if (!DuplicateTokenEx(
+        userToken,
+        TOKEN_ALL_ACCESS,
+        NULL,
+        SecurityImpersonation,
+        TokenPrimary,
+        &primaryToken
+    )) {
+        CloseHandle(userToken);
+        return false;
+    }
+
+    LPVOID env = NULL;
+    CreateEnvironmentBlock(&env, primaryToken, FALSE);
+
+    STARTUPINFOW si{};
+    si.cb = sizeof(si);
+    si.lpDesktop = (LPWSTR)L"winsta0\\default";
+
+    PROCESS_INFORMATION pi{};
+
+    BOOL ok = CreateProcessAsUserW(
+        primaryToken,
+        exePath.c_str(),
+        NULL,
+        NULL,
+        NULL,
+        FALSE,
+        CREATE_UNICODE_ENVIRONMENT,
+        env,
+        NULL,
+        &si,
+        &pi
+    );
+
+    if (env) DestroyEnvironmentBlock(env);
+
+    CloseHandle(primaryToken);
+    CloseHandle(userToken);
+
+    if (ok) {
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+    }
+
+    return ok;
+}
+
 
 #pragma clang diagnostic pop
 

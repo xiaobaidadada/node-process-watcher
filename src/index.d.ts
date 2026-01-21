@@ -103,6 +103,21 @@ export interface node_process_watcher {
      * 判断当前进程是否以管理员/root权限运行
      */
     is_admin(): boolean;
+
+    /**
+     * 在 Windows Service 中，
+     * 使用 CreateProcessAsUser 在当前登录用户桌面启动程序
+     *
+     * ⚠️ 仅 Windows 生效
+     * ⚠️ Service 必须以 LocalSystem 运行
+     *
+     * @param exe_path exe 完整路径
+     * @param args 可选命令行参数
+     */
+    launch_process_as_user_for_win_service(
+        exe_path: string,
+        args?: string
+    ): boolean;
 }
 
 export declare const node_process_watcher: node_process_watcher;

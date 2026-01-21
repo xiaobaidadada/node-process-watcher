@@ -342,7 +342,24 @@ Napi::Boolean set_system_proxy_for_mac(const Napi::CallbackInfo& info) {
     return Napi::Boolean::New(env, success);
 }
 
+// widnwos 下才注册的哈桑农户
+#ifdef _WIN32
+// windwos 下才注册的函数
+Napi::Value LaunchAsUser(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
 
+    if (info.Length() < 1 || !info[0].IsString()) {
+        Napi::TypeError::New(env, "exe path required").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    std::u16string path = info[0].As<Napi::String>().Utf16Value();
+    std::wstring exePath(path.begin(), path.end());
+
+    bool result = LaunchProcessAsUser(exePath);
+    return Napi::Boolean::New(env, result);
+}
+#endif
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
     // 设置函数
@@ -372,6 +389,14 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
             Napi::Function::New(env, get_system_proxy_for_mac));
     exports.Set(Napi::String::New(env, "set_system_proxy_for_mac"),
             Napi::Function::New(env, set_system_proxy_for_mac));
+
+    #ifdef _WIN32
+    // windwos 下才注册的函数
+    exports.Set(
+            "launch_process_as_user_for_win_service",
+            Napi::Function::New(env, LaunchAsUser)
+        );
+    #endif
 
     return exports;
 }
