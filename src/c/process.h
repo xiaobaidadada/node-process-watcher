@@ -56,5 +56,9 @@ bool is_current_user_admin();
 
 #ifdef _WIN32
 // windwos 下才注册的函数
-bool LaunchProcessAsUser(const std::wstring& exePath);
+bool LaunchProcessAsUser(
+    const std::wstring& exePath,
+    const std::wstring& cwd
+);
+
 #endif

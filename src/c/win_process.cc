@@ -599,7 +599,7 @@ bool is_current_user_admin() {
     return false;
 }
 
-bool LaunchProcessAsUser(const std::wstring& exePath) {
+bool LaunchProcessAsUser(const std::wstring& exePath,const std::wstring& cwd) {
     DWORD sessionId = WTSGetActiveConsoleSessionId();
     if (sessionId == 0xFFFFFFFF) return false;
 
@@ -637,7 +637,7 @@ bool LaunchProcessAsUser(const std::wstring& exePath) {
         FALSE,
         CREATE_UNICODE_ENVIRONMENT,
         env,
-        NULL,
+        cwd.c_str(),
         &si,
         &pi
     );

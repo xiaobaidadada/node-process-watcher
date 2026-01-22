@@ -112,10 +112,12 @@ export interface node_process_watcher {
      * ⚠️ Service 必须以 LocalSystem 运行
      *
      * @param exe_path exe 完整路径
-     * @param args 可选命令行参数
+     * @param cwd 工作目录
+     * @param args
      */
     launch_process_as_user_for_win_service(
         exe_path: string,
+        cwd: string,
         args?: string
     ): boolean;
 }

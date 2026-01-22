@@ -348,15 +348,23 @@ Napi::Boolean set_system_proxy_for_mac(const Napi::CallbackInfo& info) {
 Napi::Value LaunchAsUser(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
 
-    if (info.Length() < 1 || !info[0].IsString()) {
-        Napi::TypeError::New(env, "exe path required").ThrowAsJavaScriptException();
-        return env.Null();
-    }
+      if (info.Length() < 2 ||
+            !info[0].IsString() ||
+            !info[1].IsString()) {
+            Napi::TypeError::New(
+                env,
+                "usage: launchAsUser(exePath: string, cwd: string)"
+            ).ThrowAsJavaScriptException();
+            return env.Null();
+        }
 
-    std::u16string path = info[0].As<Napi::String>().Utf16Value();
-    std::wstring exePath(path.begin(), path.end());
+        std::u16string exe16 = info[0].As<Napi::String>().Utf16Value();
+        std::u16string cwd16 = info[1].As<Napi::String>().Utf16Value();
 
-    bool result = LaunchProcessAsUser(exePath);
+        std::wstring exePath(exe16.begin(), exe16.end());
+        std::wstring cwd(cwd16.begin(), cwd16.end());
+
+        bool result = LaunchProcessAsUser(exePath, cwd);
     return Napi::Boolean::New(env, result);
 }
 #endif
