@@ -31,6 +31,11 @@ struct MacHttpProxy {
     std::string bypass;
 };
 
+struct ProcessInfo {
+    int pid;
+    std::string name;
+};
+
 void start();
 
 void stop(std::string name);
@@ -53,6 +58,7 @@ bool setMacProxies(const std::vector<MacHttpProxy> &proxies);
 
 bool is_current_user_admin();
 
+std::vector<ProcessInfo> getAllProcesses();
 
 #ifdef _WIN32
 // windwos 下才注册的函数

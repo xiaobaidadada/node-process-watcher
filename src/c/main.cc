@@ -369,6 +369,22 @@ Napi::Value LaunchAsUser(const Napi::CallbackInfo& info) {
 }
 #endif
 
+Napi::Value get_all_processes(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    Napi::Array jsArray;
+
+    auto processes = getAllProcesses();
+    jsArray = Napi::Array::New(env, processes.size());
+    for (size_t i = 0; i < processes.size(); ++i) {
+        Napi::Object obj = Napi::Object::New(env);
+        obj.Set("pid", Napi::Number::New(env, processes[i].pid));
+        obj.Set("name", Napi::String::New(env, processes[i].name));
+        jsArray[i] = obj;
+    }
+
+    return jsArray;
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
     // 设置函数
     exports.Set(Napi::String::New(env, "on"),
@@ -397,7 +413,8 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
             Napi::Function::New(env, get_system_proxy_for_mac));
     exports.Set(Napi::String::New(env, "set_system_proxy_for_mac"),
             Napi::Function::New(env, set_system_proxy_for_mac));
-
+    exports.Set(Napi::String::New(env, "get_all_processes"),
+                Napi::Function::New(env, get_all_processes));
     #ifdef _WIN32
     // windwos 下才注册的函数
     exports.Set(

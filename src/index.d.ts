@@ -120,6 +120,9 @@ export interface node_process_watcher {
         cwd: string,
         args?: string
     ): boolean;
+
+    // 获取全部的正在运行的进程信息
+    get_all_processes():{pid:number,name:string}[];
 }
 
 export declare const node_process_watcher: node_process_watcher;

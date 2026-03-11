@@ -399,3 +399,31 @@ bool setSystemProxyForWindows(const HttpProxy& config) {
 bool is_current_user_admin() {
     return geteuid() == 0;
 }
+
+std::vector<ProcessInfo> getAllProcesses() {
+    std::vector<ProcessInfo> processes;
+
+    DIR* dir = opendir("/proc");
+    if (!dir) return processes;
+
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        // /proc 下目录名是数字的才是进程
+        if (entry->d_type == DT_DIR && isdigit(entry->d_name[0])) {
+            pid_t pid = atoi(entry->d_name);
+
+            ProcessInfo procInfo;
+            procInfo.rss = 0;
+            memset(procInfo.comm, 0, sizeof(procInfo.comm));
+            memset(procInfo.username, 0, sizeof(procInfo.username));
+
+            // 读取进程信息
+            if (read_process_stat(pid, &procInfo, 1) == 0) {
+                processes.push_back(procInfo);
+            }
+        }
+    }
+
+    closedir(dir);
+    return processes;
+}

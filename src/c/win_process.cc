@@ -655,6 +655,22 @@ bool LaunchProcessAsUser(const std::wstring& exePath,const std::wstring& cwd) {
     return ok;
 }
 
+std::vector<ProcessInfo> getAllProcesses() {
+    std::vector<ProcessInfo> processes;
+    HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (hSnap == INVALID_HANDLE_VALUE) return processes;
+
+    PROCESSENTRY32 pe;
+    pe.dwSize = sizeof(PROCESSENTRY32);
+    if (Process32First(hSnap, &pe)) {
+        do {
+            processes.push_back({ static_cast<int>(pe.th32ProcessID), pe.szExeFile });
+        } while (Process32Next(hSnap, &pe));
+    }
+
+    CloseHandle(hSnap);
+    return processes;
+}
 
 #pragma clang diagnostic pop
 
