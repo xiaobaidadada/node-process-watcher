@@ -619,35 +619,33 @@ bool is_current_user_admin() {
 std::vector<ProcessInfoShort> getAllProcesses() {
     std::vector<ProcessInfoShort> result;
 
-        // 1. 获取所有 pid
-        int bufsize = proc_listpids(PROC_ALL_PIDS, 0, nullptr, 0);
-        if (bufsize <= 0) return result;
+    // 1. 获取所有 pid
+    int bufsize = proc_listpids(PROC_ALL_PIDS, 0, nullptr, 0);
+    if (bufsize <= 0) return result;
 
-        int maxpids = bufsize / sizeof(pid_t) + 16;
-        std::vector<pid_t> pids(maxpids);
+    int maxpids = bufsize / sizeof(pid_t) + 16;
+    std::vector<pid_t> pids(maxpids);
 
-        int actual = proc_listpids(PROC_ALL_PIDS, 0, pids.data(), (int)(pids.size() * sizeof(pid_t)));
-        if (actual <= 0) return result;
+    int actual = proc_listpids(PROC_ALL_PIDS, 0, pids.data(), (int)(pids.size() * sizeof(pid_t)));
+    if (actual <= 0) return result;
 
-        int count = actual / sizeof(pid_t);
+    int count = actual / sizeof(pid_t);
 
-        // 2. 遍历 pid 获取信息
-        for (int i = 0; i < count; i++) {
-            pid_t pid = pids[i];
-            if (pid <= 0) continue;
+    // 2. 遍历 pid 获取信息
+    for (int i = 0; i < count; i++) {
+        pid_t pid = pids[i];
+        if (pid <= 0) continue;
 
-            proc_bsdinfo info;
-            int ret = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, sizeof(info));
-            if (ret <= 0) continue;
+        proc_bsdinfo info;
+        int ret = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, sizeof(info));
+        if (ret <= 0) continue;
 
-            ProcessInfoShort p;
-            p.pid = pid;
-            p.ppid = info.pbi_ppid;
-            strncpy(p.name, info.pbi_name, sizeof(p.name) - 1);
-            p.name[sizeof(p.name) - 1] = '\0';
+        ProcessInfoShort p;
+        p.pid = pid;
+        p.name = info.pbi_name;  // 直接赋值给 std::string
 
-            result.push_back(p);
-        }
+        result.push_back(p);
+    }
 
-        return result;
+    return result;
 }

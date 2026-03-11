@@ -410,17 +410,22 @@ std::vector<ProcessInfoShort> getAllProcesses() {
     while ((entry = readdir(dir)) != nullptr) {
         // /proc 下目录名是数字的才是进程
         if (entry->d_type == DT_DIR && isdigit(entry->d_name[0])) {
-            pid_t pid = atoi(entry->d_name);
+            int pid = std::atoi(entry->d_name);
 
             ProcessInfoShort procInfo;
-            procInfo.rss = 0;
-            memset(procInfo.comm, 0, sizeof(procInfo.comm));
-            memset(procInfo.username, 0, sizeof(procInfo.username));
+            procInfo.pid = pid;
 
-            // 读取进程信息
-            if (read_process_stat(pid, &procInfo, 1) == 0) {
-                processes.push_back(procInfo);
+            // 读取进程名
+            std::string commPath = std::string("/proc/") + entry->d_name + "/comm";
+            std::ifstream commFile(commPath);
+            if (commFile.is_open()) {
+                std::getline(commFile, procInfo.name);
+                commFile.close();
+            } else {
+                procInfo.name = "";  // 读取失败就空字符串
             }
+
+            processes.push_back(procInfo);
         }
     }
 
