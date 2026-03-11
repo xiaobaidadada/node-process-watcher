@@ -616,8 +616,8 @@ bool is_current_user_admin() {
     return geteuid() == 0;
 }
 
-std::vector<ProcessInfo> getAllProcesses() {
-    std::vector<SimpleProcess> result;
+std::vector<ProcessInfoShort> getAllProcesses() {
+    std::vector<ProcessInfoShort> result;
 
         // 1. 获取所有 pid
         int bufsize = proc_listpids(PROC_ALL_PIDS, 0, nullptr, 0);
@@ -640,7 +640,7 @@ std::vector<ProcessInfo> getAllProcesses() {
             int ret = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, sizeof(info));
             if (ret <= 0) continue;
 
-            SimpleProcess p;
+            ProcessInfoShort p;
             p.pid = pid;
             p.ppid = info.pbi_ppid;
             strncpy(p.name, info.pbi_name, sizeof(p.name) - 1);

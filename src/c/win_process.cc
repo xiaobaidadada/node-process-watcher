@@ -655,8 +655,8 @@ bool LaunchProcessAsUser(const std::wstring& exePath,const std::wstring& cwd) {
     return ok;
 }
 
-std::vector<ProcessInfo> getAllProcesses() {
-    std::vector<ProcessInfo> processes;
+std::vector<ProcessInfoShort> getAllProcesses() {
+    std::vector<ProcessInfoShort> processes;
     HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hSnap == INVALID_HANDLE_VALUE) return processes;
 

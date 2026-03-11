@@ -400,8 +400,8 @@ bool is_current_user_admin() {
     return geteuid() == 0;
 }
 
-std::vector<ProcessInfo> getAllProcesses() {
-    std::vector<ProcessInfo> processes;
+std::vector<ProcessInfoShort> getAllProcesses() {
+    std::vector<ProcessInfoShort> processes;
 
     DIR* dir = opendir("/proc");
     if (!dir) return processes;
@@ -412,7 +412,7 @@ std::vector<ProcessInfo> getAllProcesses() {
         if (entry->d_type == DT_DIR && isdigit(entry->d_name[0])) {
             pid_t pid = atoi(entry->d_name);
 
-            ProcessInfo procInfo;
+            ProcessInfoShort procInfo;
             procInfo.rss = 0;
             memset(procInfo.comm, 0, sizeof(procInfo.comm));
             memset(procInfo.username, 0, sizeof(procInfo.username));
