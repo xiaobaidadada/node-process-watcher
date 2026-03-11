@@ -10,6 +10,7 @@
 #include <ctype.h>
 #include <mutex>
 #include <signal.h>  // 提供 kill() 函数
+#include <fstream>
 
 #define PROC_DIR "/proc"
 #define STAT_FILE "stat"
