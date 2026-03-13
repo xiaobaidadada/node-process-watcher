@@ -60,11 +60,29 @@ bool is_current_user_admin();
 
 std::vector<ProcessInfoShort> getAllProcesses();
 
+
+// 根据 UID 获取用户名
+Napi::Value getUsernameByUid(const Napi::CallbackInfo& info);
+
+// 获取全部用户 [{ uid, username }, ...]
+Napi::Array getAllUsers(const Napi::CallbackInfo& info);
+
+
+
 #ifdef _WIN32
 // windwos 下才注册的函数
 bool LaunchProcessAsUser(
     const std::wstring& exePath,
     const std::wstring& cwd
 );
+
+struct WindowsUser {
+    std::string username;
+    std::string domain;
+    std::string sid;
+    std::vector<std::string> groups;
+};
+
+Napi::Object GetFileOwner(const Napi::CallbackInfo& info);
 
 #endif

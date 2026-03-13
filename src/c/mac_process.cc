@@ -649,3 +649,36 @@ std::vector<ProcessInfoShort> getAllProcesses() {
 
     return result;
 }
+
+
+Napi::Object getUsernameByUid(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (info.Length() < 1 || !info[0].IsNumber()) {
+        Napi::TypeError::New(env, "UID required").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    uid_t uid = static_cast<uid_t>(info[0].As<Napi::Number>().Uint32Value());
+    struct passwd *pw = getpwuid(uid);
+    if (!pw) return env.Null();
+
+    return Napi::String::New(env, pw->pw_name);
+}
+
+Napi::Array getAllUsers(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    Napi::Array arr = Napi::Array::New(env);
+
+    struct passwd *pw;
+    setpwent();
+    uint32_t idx = 0;
+    while ((pw = getpwent()) != nullptr) {
+        Napi::Object obj = Napi::Object::New(env);
+        obj.Set("uid", static_cast<uint32_t>(pw->pw_uid));
+        obj.Set("username", pw->pw_name);
+        arr.Set(idx++, obj);
+    }
+    endpwent();
+
+    return arr;
+}

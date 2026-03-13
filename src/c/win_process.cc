@@ -7,6 +7,7 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
 #pragma ide diagnostic ignored "UnreachableCode"
+#pragma comment(lib, "netapi32.lib")
 
 
 #include <fstream>
@@ -22,6 +23,8 @@
 #include <wininet.h>
 #include <wtsapi32.h>
 #include <userenv.h>
+#include <lm.h>
+#include <sddl.h>
 
 #pragma comment(lib, "wininet.lib")
 #pragma comment(lib, "Wtsapi32.lib")
@@ -670,6 +673,196 @@ std::vector<ProcessInfoShort> getAllProcesses() {
 
     CloseHandle(hSnap);
     return processes;
+}
+
+std::vector<WindowsUser> listWindowsUsersWithGroups() {
+    std::vector<WindowsUser> users;
+
+    LPUSER_INFO_1 pBuf = nullptr;
+    DWORD dwLevel = 1;
+    DWORD dwPrefMaxLen = MAX_PREFERRED_LENGTH;
+    DWORD dwEntriesRead = 0;
+    DWORD dwTotalEntries = 0;
+    DWORD dwResumeHandle = 0;
+
+    NET_API_STATUS nStatus;
+
+    do {
+        nStatus = NetUserEnum(
+            nullptr,
+            dwLevel,
+            FILTER_NORMAL_ACCOUNT,
+            (LPBYTE*)&pBuf,
+            dwPrefMaxLen,
+            &dwEntriesRead,
+            &dwTotalEntries,
+            &dwResumeHandle
+        );
+
+        if ((nStatus == NERR_Success || nStatus == ERROR_MORE_DATA) && pBuf != nullptr) {
+
+            LPUSER_INFO_1 pTmpBuf = pBuf;
+
+            for (DWORD i = 0; i < dwEntriesRead; i++) {
+                LPUSER_INFO_1 userInfo = &pTmpBuf[i];
+
+                WindowsUser user;
+
+                // 用户名和域
+                int unameLen = WideCharToMultiByte(CP_UTF8, 0, userInfo->usri1_name, -1, nullptr, 0, nullptr, nullptr);
+                std::vector<char> unameBuf(unameLen);
+                WideCharToMultiByte(CP_UTF8, 0, userInfo->usri1_name, -1, unameBuf.data(), unameLen, nullptr, nullptr);
+                user.username = unameBuf.data();
+
+                wchar_t domainName[256];
+                DWORD domainSize = 256;
+                SID_NAME_USE sidType;
+                DWORD cbSid = 0;
+
+                // 先获取 SID 大小
+                LookupAccountNameW(nullptr, userInfo->usri1_name, nullptr, &cbSid, nullptr, &domainSize, &sidType);
+
+                if (cbSid > 0) {
+                    PSID pSid = (PSID)malloc(cbSid);
+                    domainSize = 256;
+
+                    if (LookupAccountNameW(nullptr, userInfo->usri1_name, pSid, &cbSid, domainName, &domainSize, &sidType)) {
+                        // 转域名 UTF-8
+                        int dLen = WideCharToMultiByte(CP_UTF8, 0, domainName, -1, nullptr, 0, nullptr, nullptr);
+                        std::vector<char> domainBuf(dLen);
+                        WideCharToMultiByte(CP_UTF8, 0, domainName, -1, domainBuf.data(), dLen, nullptr, nullptr);
+                        user.domain = domainBuf.data();
+
+                        // 转 SID 字符串
+                        LPSTR sidString = nullptr;
+                        ConvertSidToStringSidA(pSid, &sidString);
+                        user.sid = sidString ? sidString : "";
+                        if (sidString) LocalFree(sidString);
+                    }
+                    free(pSid);
+                }
+
+                // 获取用户所属本地组
+                LPLOCALGROUP_USERS_INFO_0 pGroupBuf = nullptr;
+                DWORD dwEntries = 0, dwTotal = 0;
+                if (NetUserGetLocalGroups(nullptr, userInfo->usri1_name, 0, LG_INCLUDE_INDIRECT, (LPBYTE*)&pGroupBuf, MAX_PREFERRED_LENGTH, &dwEntries, &dwTotal) == NERR_Success) {
+                    for (DWORD j = 0; j < dwEntries; ++j) {
+                        int gLen = WideCharToMultiByte(CP_UTF8, 0, pGroupBuf[j].lgrui0_name, -1, nullptr, 0, nullptr, nullptr);
+                        std::vector<char> gBuf(gLen);
+                        WideCharToMultiByte(CP_UTF8, 0, pGroupBuf[j].lgrui0_name, -1, gBuf.data(), gLen, nullptr, nullptr);
+                        user.groups.push_back(gBuf.data());
+                    }
+                    if (pGroupBuf) NetApiBufferFree(pGroupBuf);
+                }
+
+                users.push_back(user);
+            }
+
+            NetApiBufferFree(pBuf);
+            pBuf = nullptr;
+        }
+    } while (nStatus == ERROR_MORE_DATA);
+
+    return users;
+}
+
+// 返回全部用户
+Napi::Array getAllUsers(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    Napi::Array arr = Napi::Array::New(env);
+
+    std::vector<WindowsUser> users = listWindowsUsersWithGroups();
+    for (size_t i = 0; i < users.size(); i++) {
+        Napi::Object obj = Napi::Object::New(env);
+        obj.Set("username", users[i].username);
+        obj.Set("domain", users[i].domain);
+        obj.Set("sid", users[i].sid);
+
+        // groups 数组
+        Napi::Array groupArr = Napi::Array::New(env, users[i].groups.size());
+        for (size_t j = 0; j < users[i].groups.size(); j++) {
+            groupArr.Set(j, users[i].groups[j]);
+        }
+        obj.Set("groups", groupArr);
+
+        arr.Set(i, obj);
+    }
+    return arr;
+}
+
+// 根据 UID 获取用户名 → Windows 下返回 null
+Napi::Value getUsernameByUid(const Napi::CallbackInfo& info) {
+    return info.Env().Null();
+}
+
+
+Napi::Object GetFileOwner(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1 || !info[0].IsString()) {
+        Napi::TypeError::New(env, "File path expected").ThrowAsJavaScriptException();
+        return Napi::Object::New(env);
+    }
+
+    std::string filePath = info[0].As<Napi::String>().Utf8Value();
+
+    // 转为宽字符
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, filePath.c_str(), -1, nullptr, 0);
+    std::wstring wFilePath(wlen, 0);
+    MultiByteToWideChar(CP_UTF8, 0, filePath.c_str(), -1, &wFilePath[0], wlen);
+
+    DWORD size = 0;
+    GetFileSecurityW(wFilePath.c_str(), OWNER_SECURITY_INFORMATION, nullptr, 0, &size);
+    PSECURITY_DESCRIPTOR pSD = (PSECURITY_DESCRIPTOR)malloc(size);
+    if (!GetFileSecurityW(wFilePath.c_str(), OWNER_SECURITY_INFORMATION, pSD, size, &size)) {
+        free(pSD);
+        Napi::Error::New(env, "Failed to get security descriptor").ThrowAsJavaScriptException();
+        return Napi::Object::New(env);
+    }
+
+    PSID pOwner = nullptr;
+    BOOL ownerDefaulted = FALSE;
+    if (!GetSecurityDescriptorOwner(pSD, &pOwner, &ownerDefaulted)) {
+        free(pSD);
+        Napi::Error::New(env, "Failed to get owner from security descriptor").ThrowAsJavaScriptException();
+        return Napi::Object::New(env);
+    }
+
+    // 获取用户名和域名
+    char username[256] = {0}, domain[256] = {0};
+    DWORD unameLen = sizeof(username), domainLen = sizeof(domain);
+    SID_NAME_USE sidType;
+    LookupAccountSidA(nullptr, pOwner, username, &unameLen, domain, &domainLen, &sidType);
+
+    // 获取 SID 字符串
+    LPSTR sidString = nullptr;
+    ConvertSidToStringSidA(pOwner, &sidString);
+
+    // 构造返回对象
+    Napi::Object result = Napi::Object::New(env);
+    result.Set("username", std::string(username, strnlen(username, 256)));
+    result.Set("domain", std::string(domain, strnlen(domain, 256)));
+    result.Set("sid", sidString ? sidString : "");
+
+    // 根据 SID 类型判断是 user 还是 group
+    std::string typeStr = "unknown";
+    switch (sidType) {
+        case SidTypeUser: typeStr = "user"; break;
+        case SidTypeGroup: typeStr = "group"; break;
+        case SidTypeWellKnownGroup: typeStr = "well-known-group"; break;
+        case SidTypeAlias: typeStr = "alias"; break;
+        case SidTypeDeletedAccount: typeStr = "deleted-account"; break;
+        case SidTypeInvalid: typeStr = "invalid"; break;
+        case SidTypeUnknown: typeStr = "unknown"; break;
+        case SidTypeComputer: typeStr = "computer"; break;
+        default: typeStr = "other"; break;
+    }
+    result.Set("type", typeStr);
+
+    if (sidString) LocalFree(sidString);
+    free(pSD);
+
+    return result;
 }
 
 #pragma clang diagnostic pop

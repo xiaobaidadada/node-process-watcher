@@ -1,6 +1,6 @@
 {
   "name": "node-process-watcher",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "description": "Get process information in real time",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
@@ -44,7 +44,7 @@
   ],
   "devDependencies": {
     "mocha": "^10.7.3",
-    "node-addon-api": "^8.5.0",
+    "node-addon-api": "^8.6.0",
     "node-gyp": "^10.3.1",
     "prebuild": "^13.0.1"
   }

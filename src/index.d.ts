@@ -6,7 +6,7 @@ export interface process_info {
     cpu: number; // 使用率
 }
 
-export interface node_process_watcher {
+export interface node_process_watcher_type {
 
     /**
      *  监听进程，需要提供一个 key
@@ -123,6 +123,23 @@ export interface node_process_watcher {
 
     // 获取全部的正在运行的进程信息
     get_all_processes():{pid:number,name:string}[];
+
+    get_username_by_uid(uid:number):string;
+
+    get_all_users(): ({uid:number,username:string} |
+        {
+            groups:string[],
+            username:string,
+            domain:string,
+            sid:string
+        })[];
+
+    get_file_owner(file_path:string):{
+        username:string,
+        domain:string,
+        sid:string,
+        type:string
+    }
 }
 
-export declare const node_process_watcher: node_process_watcher;
+export declare const node_process_watcher: node_process_watcher_type;

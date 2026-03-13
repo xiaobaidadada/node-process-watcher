@@ -415,12 +415,15 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
             Napi::Function::New(env, set_system_proxy_for_mac));
     exports.Set(Napi::String::New(env, "get_all_processes"),
                 Napi::Function::New(env, get_all_processes));
+    exports.Set("get_username_by_uid", Napi::Function::New(env, getUsernameByUid));
+    exports.Set("get_all_users", Napi::Function::New(env, getAllUsers));
     #ifdef _WIN32
     // windwos 下才注册的函数
     exports.Set(
             "launch_process_as_user_for_win_service",
             Napi::Function::New(env, LaunchAsUser)
         );
+    exports.Set("get_file_owner", Napi::Function::New(env, GetFileOwner));
     #endif
 
     return exports;
