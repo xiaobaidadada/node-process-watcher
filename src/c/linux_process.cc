@@ -434,7 +434,7 @@ std::vector<ProcessInfoShort> getAllProcesses() {
     return processes;
 }
 
-Napi::Object getUsernameByUid(const Napi::CallbackInfo& info) {
+Napi::Value getUsernameByUid(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     if (info.Length() < 1 || !info[0].IsNumber()) {
         Napi::TypeError::New(env, "UID required").ThrowAsJavaScriptException();
