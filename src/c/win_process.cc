@@ -937,26 +937,45 @@ public:
 
         std::wstring cmd = L"\"" + exe_path_ + L"\" " + args_;
 
-        BOOL success = CreateProcessW(
-            nullptr,
-            cmd.data(),
-            nullptr,
-            nullptr,
-            TRUE,
-            0,
-            nullptr,
-            cwd_.empty() ? nullptr : cwd_.c_str(),
-            &si,
-            &pi
-        );
+        // 获取当前活动用户 Session
+        DWORD sessionId = WTSGetActiveConsoleSessionId();
+        HANDLE userToken = NULL;
+        WTSQueryUserToken(sessionId, &userToken);
+        HANDLE primaryToken = NULL;
+        DuplicateTokenEx(
+                            userToken,
+                            TOKEN_ASSIGN_PRIMARY | TOKEN_DUPLICATE | TOKEN_QUERY | TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID,
+                            NULL,
+                            SecurityImpersonation,
+                            TokenPrimary,
+                            &primaryToken);
+        LPVOID environment = NULL;
+            if (!CreateEnvironmentBlock(&environment, primaryToken, FALSE)) {
+                environment = NULL;
+            }
+
+            DWORD flags = CREATE_UNICODE_ENVIRONMENT;
+
+
+            BOOL ok = CreateProcessAsUserW(
+                primaryToken,
+                NULL,
+                cmd.data(),
+                NULL,
+                NULL,
+                TRUE,
+                flags,
+                environment,
+                 cwd_.empty() ? nullptr : cwd_.c_str(),
+                &si,
+                &pi
+            );
 
         CloseHandle(hStdOutWrite); // 关闭写端，子进程可以写
 
-        if (!success) {
-            CloseHandle(hStdOutRead);
-            SetError("Failed to create process");
-            return;
-        }
+        if (environment) DestroyEnvironmentBlock(environment);
+         CloseHandle(primaryToken);
+            CloseHandle(userToken);
 
         char buffer[4096];
         DWORD bytesRead;

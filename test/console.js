@@ -2,6 +2,7 @@
 const {node_process_watcher} = require("../lib/index.js");
 const path = require("path");
 
+// 在nssm下运行
 
 const p = "node.exe"
 const args = "log.js"
