@@ -812,7 +812,7 @@ Napi::Object GetFileOwner(const Napi::CallbackInfo& info) {
 }
 
 
-Napi::Value LaunchUserProcess(const Napi::CallbackInfo& info) {
+Napi::Value LaunchUserWindowsProcess(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
 
     if (info.Length() < 1 || !info[0].IsString()) {
@@ -824,7 +824,6 @@ Napi::Value LaunchUserProcess(const Napi::CallbackInfo& info) {
     std::wstring path(u16path.begin(), u16path.end());
     std::wstring args = L"";
     std::wstring cwd = L"";
-    int mode = 0; // 0=显示 1隐藏
 
     if (info.Length() >= 2 && info[1].IsString()) {
         std::u16string u16args = info[1].ToString().Utf16Value();
@@ -834,8 +833,7 @@ Napi::Value LaunchUserProcess(const Napi::CallbackInfo& info) {
         std::u16string u16cwd = info[2].ToString().Utf16Value();
         cwd = std::wstring(u16cwd.begin(), u16cwd.end());
     }
-    if (info.Length() >= 4 && info[3].IsNumber())
-        mode = info[3].ToNumber().Int32Value();
+
 
     // 构建命令行: "path" args
     std::wstring commandLine = L"\"" + path + L"\" " + args;
@@ -866,23 +864,10 @@ Napi::Value LaunchUserProcess(const Napi::CallbackInfo& info) {
         environment = NULL;
     }
 
-    STARTUPINFOW si{};
+   STARTUPINFOW si{};
     si.cb = sizeof(si);
     si.lpDesktop = L"winsta0\\default"; // 指定桌面
-
-    // 根据 mode 设置窗口显示
-    // 进程创建行为,它控制 系统底层如何启动进程， 是否创建新控制台 (CREATE_NEW_CONSOLE) 是否不显示窗口 (CREATE_NO_WINDOW) 是否使用 Unicode 环境 (CREATE_UNICODE_ENVIRONMENT) 是否挂起进程 (CREATE_SUSPENDED)
-    DWORD flags = CREATE_UNICODE_ENVIRONMENT ;
-    si.dwFlags |= STARTF_USESHOWWINDOW; ; // 告诉系统 wShowWindow 有效
-    switch(mode){
-    case 0: // GUI 或 console 显示
-        flags |= CREATE_NEW_CONSOLE;//如果是console  给 console 创建窗口
-        si.wShowWindow = SW_SHOW;
-        break;
-    case 1:
-        si.wShowWindow = SW_HIDE;
-        break;
-    }
+    DWORD flags = CREATE_UNICODE_ENVIRONMENT;
 
     PROCESS_INFORMATION pi{};
     BOOL ok = CreateProcessAsUserW(
@@ -913,6 +898,145 @@ Napi::Value LaunchUserProcess(const Napi::CallbackInfo& info) {
     return Napi::Number::New(env, -1);
 }
 
+
+
+class ProcessWorker : public Napi::AsyncWorker {
+public:
+    ProcessWorker(const Napi::Env& env,
+                  const std::wstring& exe_path,
+                  const std::wstring& args,
+                  const std::wstring& cwd,
+                  Napi::Function dataCallback,
+                  Napi::Function doneCallback)
+        : Napi::AsyncWorker(doneCallback),  // AsyncWorker 的默认回调用作完成回调
+          exe_path_(exe_path), args_(args), cwd_(cwd),
+          tsfn_(Napi::ThreadSafeFunction::New(env, dataCallback, "OnData", 0, 1))
+    {}
+
+    ~ProcessWorker() {
+        tsfn_.Release();
+    }
+
+    void Execute() override {
+        SECURITY_ATTRIBUTES sa{ sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE };
+        HANDLE hStdOutRead = nullptr;
+        HANDLE hStdOutWrite = nullptr;
+
+        if (!CreatePipe(&hStdOutRead, &hStdOutWrite, &sa, 0)) {
+            SetError("Failed to create stdout pipe");
+            return;
+        }
+
+        PROCESS_INFORMATION pi{ 0 };
+        STARTUPINFOW si{ 0 };
+        si.cb = sizeof(STARTUPINFOW);
+        si.dwFlags = STARTF_USESTDHANDLES;
+        si.hStdOutput = hStdOutWrite;
+        si.hStdError = hStdOutWrite;
+        si.hStdInput = nullptr;
+
+        std::wstring cmd = L"\"" + exe_path_ + L"\" " + args_;
+
+        BOOL success = CreateProcessW(
+            nullptr,
+            cmd.data(),
+            nullptr,
+            nullptr,
+            TRUE,
+            0,
+            nullptr,
+            cwd_.empty() ? nullptr : cwd_.c_str(),
+            &si,
+            &pi
+        );
+
+        CloseHandle(hStdOutWrite); // 关闭写端，子进程可以写
+
+        if (!success) {
+            CloseHandle(hStdOutRead);
+            SetError("Failed to create process");
+            return;
+        }
+
+        char buffer[4096];
+        DWORD bytesRead;
+        while (ReadFile(hStdOutRead, buffer, sizeof(buffer)-1, &bytesRead, nullptr) && bytesRead > 0) {
+//             buffer[bytesRead] = '\0';
+            if(bytesRead==0) break;
+            std::string output(buffer, bytesRead);
+
+            tsfn_.BlockingCall([output](Napi::Env env, Napi::Function jsCallback) {
+                jsCallback.Call({ Napi::String::New(env, output) });
+            });
+        }
+
+        CloseHandle(hStdOutRead);
+        WaitForSingleObject(pi.hProcess, INFINITE);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+    }
+
+private:
+    std::wstring exe_path_;
+    std::wstring args_;
+    std::wstring cwd_;
+    Napi::ThreadSafeFunction tsfn_;
+};
+
+
+Napi::Value LaunchUserConsoleProcess(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+
+    // 参数数量检查
+    if (info.Length() < 5) {
+        Napi::TypeError::New(env, "Expected 5 arguments: exePath, args, cwd, dataCallback, doneCallback").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    // exePath
+    if (!info[0].IsString()) {
+        Napi::TypeError::New(env, "exePath must be a string").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+    std::u16string u16path = info[0].ToString().Utf16Value();
+    std::wstring exe_path(u16path.begin(), u16path.end());
+
+    // args
+    if (!info[1].IsString()) {
+        Napi::TypeError::New(env, "args must be a string").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+    std::u16string u16args = info[1].ToString().Utf16Value();
+    std::wstring args(u16args.begin(), u16args.end());
+
+    // cwd
+    if (!info[2].IsString()) {
+        Napi::TypeError::New(env, "cwd must be a string").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+    std::u16string u16cwd = info[2].ToString().Utf16Value();
+    std::wstring cwd(u16cwd.begin(), u16cwd.end());
+
+    // dataCallback
+    if (!info[3].IsFunction()) {
+        Napi::TypeError::New(env, "dataCallback must be a function").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+    Napi::Function dataCallback = info[3].As<Napi::Function>();
+
+    // doneCallback
+    if (!info[4].IsFunction()) {
+        Napi::TypeError::New(env, "doneCallback must be a function").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+    Napi::Function doneCallback = info[4].As<Napi::Function>();
+
+    // 创建并队列异步任务
+    ProcessWorker* worker = new ProcessWorker(env, exe_path, args, cwd, dataCallback, doneCallback);
+    worker->Queue();
+
+    return env.Null();
+}
 
 #pragma clang diagnostic pop
 

@@ -400,8 +400,9 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
     // windwos 下才注册的函数
     exports.Set(
             "launch_process_as_user_for_win_service",
-            Napi::Function::New(env, LaunchUserProcess)
+            Napi::Function::New(env, LaunchUserWindowsProcess)
         );
+    exports.Set("launch_process_as_user_for_win_service_console", Napi::Function::New(env, LaunchUserConsoleProcess));
     exports.Set("get_file_owner", Napi::Function::New(env, GetFileOwner));
     #endif
 

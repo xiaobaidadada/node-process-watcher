@@ -103,9 +103,9 @@ export interface node_process_watcher_type {
      * @param exe_path exe 完整路径
      * @param cwd 工作目录
      * @param args
-     * @param mode 可选，启动模式：0 显示（默认值） 1隐藏
      */
-    launch_process_as_user_for_win_service(exe_path: string, args?: string, cwd?: string, mode?: 0 | 1): number;
+    launch_process_as_user_for_win_service(exe_path: string, args?: string, cwd?: string): number;
+    launch_process_as_user_for_win_service_console(exe_path: string, args?: string, cwd?: string, on_data?: (data: string) => void, on_done?: () => void): void;
     get_all_processes(): {
         pid: number;
         name: string;
