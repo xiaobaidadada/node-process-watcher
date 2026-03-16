@@ -342,31 +342,10 @@ Napi::Boolean set_system_proxy_for_mac(const Napi::CallbackInfo& info) {
     return Napi::Boolean::New(env, success);
 }
 
-// widnwos 下才注册的哈桑农户
+
 #ifdef _WIN32
 // windwos 下才注册的函数
-Napi::Value LaunchAsUser(const Napi::CallbackInfo& info) {
-    Napi::Env env = info.Env();
 
-      if (info.Length() < 2 ||
-            !info[0].IsString() ||
-            !info[1].IsString()) {
-            Napi::TypeError::New(
-                env,
-                "usage: launchAsUser(exePath: string, cwd: string)"
-            ).ThrowAsJavaScriptException();
-            return env.Null();
-        }
-
-        std::u16string exe16 = info[0].As<Napi::String>().Utf16Value();
-        std::u16string cwd16 = info[1].As<Napi::String>().Utf16Value();
-
-        std::wstring exePath(exe16.begin(), exe16.end());
-        std::wstring cwd(cwd16.begin(), cwd16.end());
-
-        bool result = LaunchProcessAsUser(exePath, cwd);
-    return Napi::Boolean::New(env, result);
-}
 #endif
 
 Napi::Value get_all_processes(const Napi::CallbackInfo& info) {
@@ -421,7 +400,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
     // windwos 下才注册的函数
     exports.Set(
             "launch_process_as_user_for_win_service",
-            Napi::Function::New(env, LaunchAsUser)
+            Napi::Function::New(env, LaunchUserProcess)
         );
     exports.Set("get_file_owner", Napi::Function::New(env, GetFileOwner));
     #endif

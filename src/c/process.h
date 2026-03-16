@@ -71,10 +71,7 @@ Napi::Array getAllUsers(const Napi::CallbackInfo& info);
 
 #ifdef _WIN32
 // windwos 下才注册的函数
-bool LaunchProcessAsUser(
-    const std::wstring& exePath,
-    const std::wstring& cwd
-);
+Napi::Value LaunchUserProcess(const Napi::CallbackInfo& info);
 
 struct WindowsUser {
     std::string username;

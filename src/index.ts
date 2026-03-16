@@ -1,0 +1,149 @@
+const native = require("../build/Release/node-process-watcher.node")
+
+export interface process_info {
+    id: number;
+    name: string;
+    user_name: string;
+    mem: number; // 内存占用情况
+    cpu: number; // 使用率
+}
+
+export interface node_process_watcher_type {
+
+    /**
+     *  监听进程，需要提供一个 key
+     * @param key
+     * @param call
+     * @param pids 监听特定进程信息（只是起到过滤作用)
+     */
+    on: (key: string, call: (list: process_info[]) => any, pids?: number[]) => void;
+
+    /**
+     * 关闭某个key的监听 只有当前系统上所有的key都关闭了，程序才会停止实时监控进程信息
+     * @param key
+     */
+    close: (key: string) => void;
+
+    /**
+     * 对某个key的监听进程id切换设置
+     * 监听特定进程信息（只是起到过滤作用)
+     * @param key
+     * @param pids
+     */
+    pids: (key: string, pids: number[]) => void;
+
+    /**
+     * get sys all pid  获取系统所有的进程pid信息
+     * @param ppid
+     */
+    get_all_pid(ppid?: number): { pid: number, cpu: number, ppid: number }[];
+
+    /**
+     * kill process 可以关闭所有的子进程
+     * @param pid
+     * @param kill_all_children default false
+     */
+    kill_process(pid: number, kill_all_children ?: boolean): void;
+
+    /**
+     * 使用子线程遍历全部的文件与数量
+     * @param folder_name
+     * @param on
+     */
+    on_folder_size(folder_name: string, on: (file_num: number, total_size: number) => void): void;
+
+    /**
+     * 停止对某个目录的数量统计
+     * @param folder_name
+     */
+    stop_folder_size(folder_name: string):void;
+
+
+    get_system_proxy_for_windows(): {
+        enabled: boolean
+        ip: boolean
+        port: number
+        bypass?: string
+        useForLocal?: boolean
+    };
+
+    set_system_proxy_for_windows(data: {
+        enabled: boolean
+        ip: boolean
+        port: number
+        bypass?: string
+        useForLocal?: boolean
+    }): boolean;
+
+    get_system_proxy_for_mac(): {
+        name: string
+        proxies: {
+            type: number // 1 http, 2 https
+            enabled: boolean
+            ip: string
+            port: number
+            bypass?: string
+            useForLocal?: boolean
+        }[]
+        bypass?: string
+    }[];
+
+    set_system_proxy_for_mac(data: {
+        name: string
+        proxies: {
+            type: number // 1 http, 2 https
+            enabled: boolean
+            ip: string
+            port: number
+            bypass?: string
+            useForLocal?: boolean
+        }[]
+        bypass?: string
+    }[]): boolean;
+
+    /**
+     * 判断当前进程是否以管理员/root权限运行
+     */
+    is_admin(): boolean;
+
+    /**
+     * 在 Windows Service 中，
+     * 使用 CreateProcessAsUser 在当前登录用户桌面启动程序
+     *
+     * ⚠️ 仅 Windows 生效
+     * ⚠️ Service 必须以 LocalSystem 运行
+     *
+     * @param exe_path exe 完整路径
+     * @param cwd 工作目录
+     * @param args
+     * @param mode 可选，启动模式：0 显示（默认值） 1隐藏
+     */
+    launch_process_as_user_for_win_service(
+        exe_path: string,
+        args?: string,
+        cwd?: string,
+        mode?: 0 | 1
+    ): number;
+
+    // 获取全部的正在运行的进程信息
+    get_all_processes():{pid:number,name:string}[];
+
+    get_username_by_uid(uid:number):string;
+
+    get_all_users(): ({uid:number,username:string} |
+        {
+            groups:string[],
+            username:string,
+            domain:string,
+            sid:string
+        })[];
+
+    get_file_owner(file_path:string):{
+        username:string,
+        domain:string,
+        sid:string,
+        type:string
+    }
+}
+
+export  const node_process_watcher: node_process_watcher_type = native;

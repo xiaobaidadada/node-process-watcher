@@ -602,61 +602,7 @@ bool is_current_user_admin() {
     return false;
 }
 
-bool LaunchProcessAsUser(const std::wstring& exePath,const std::wstring& cwd) {
-    DWORD sessionId = WTSGetActiveConsoleSessionId();
-    if (sessionId == 0xFFFFFFFF) return false;
 
-    HANDLE userToken = NULL;
-    if (!WTSQueryUserToken(sessionId, &userToken)) return false;
-
-    HANDLE primaryToken = NULL;
-    if (!DuplicateTokenEx(
-        userToken,
-        TOKEN_ALL_ACCESS,
-        NULL,
-        SecurityImpersonation,
-        TokenPrimary,
-        &primaryToken
-    )) {
-        CloseHandle(userToken);
-        return false;
-    }
-
-    LPVOID env = NULL;
-    CreateEnvironmentBlock(&env, primaryToken, FALSE);
-
-    STARTUPINFOW si{};
-    si.cb = sizeof(si);
-    si.lpDesktop = (LPWSTR)L"winsta0\\default";
-
-    PROCESS_INFORMATION pi{};
-
-    BOOL ok = CreateProcessAsUserW(
-        primaryToken,
-        exePath.c_str(),
-        NULL,
-        NULL,
-        NULL,
-        FALSE,
-        CREATE_UNICODE_ENVIRONMENT,
-        env,
-        cwd.c_str(),
-        &si,
-        &pi
-    );
-
-    if (env) DestroyEnvironmentBlock(env);
-
-    CloseHandle(primaryToken);
-    CloseHandle(userToken);
-
-    if (ok) {
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
-    }
-
-    return ok;
-}
 
 std::vector<ProcessInfoShort> getAllProcesses() {
     std::vector<ProcessInfoShort> processes;
@@ -864,6 +810,109 @@ Napi::Object GetFileOwner(const Napi::CallbackInfo& info) {
 
     return result;
 }
+
+
+Napi::Value LaunchUserProcess(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1 || !info[0].IsString()) {
+        Napi::TypeError::New(env, "Expected exe path").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    std::u16string u16path = info[0].ToString().Utf16Value();
+    std::wstring path(u16path.begin(), u16path.end());
+    std::wstring args = L"";
+    std::wstring cwd = L"";
+    int mode = 0; // 0=显示 1隐藏
+
+    if (info.Length() >= 2 && info[1].IsString()) {
+        std::u16string u16args = info[1].ToString().Utf16Value();
+        args = std::wstring(u16args.begin(), u16args.end());
+    }
+    if (info.Length() >= 3 && info[2].IsString()) {
+        std::u16string u16cwd = info[2].ToString().Utf16Value();
+        cwd = std::wstring(u16cwd.begin(), u16cwd.end());
+    }
+    if (info.Length() >= 4 && info[3].IsNumber())
+        mode = info[3].ToNumber().Int32Value();
+
+    // 构建命令行: "path" args
+    std::wstring commandLine = L"\"" + path + L"\" " + args;
+    std::vector<wchar_t> cmd(commandLine.begin(), commandLine.end());
+    cmd.push_back(0); // null-terminate
+
+    // 获取当前活动用户 Session
+    DWORD sessionId = WTSGetActiveConsoleSessionId();
+    if (sessionId == 0xFFFFFFFF) return Napi::Number::New(env, -1);
+
+    HANDLE userToken = NULL;
+    if (!WTSQueryUserToken(sessionId, &userToken)) return Napi::Number::New(env, -1);
+
+    HANDLE primaryToken = NULL;
+    if (!DuplicateTokenEx(
+            userToken,
+            TOKEN_ASSIGN_PRIMARY | TOKEN_DUPLICATE | TOKEN_QUERY | TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID,
+            NULL,
+            SecurityImpersonation,
+            TokenPrimary,
+            &primaryToken)) {
+        CloseHandle(userToken);
+        return Napi::Number::New(env, -1);
+    }
+
+    LPVOID environment = NULL;
+    if (!CreateEnvironmentBlock(&environment, primaryToken, FALSE)) {
+        environment = NULL;
+    }
+
+    STARTUPINFOW si{};
+    si.cb = sizeof(si);
+    si.lpDesktop = L"winsta0\\default"; // 指定桌面
+
+    // 根据 mode 设置窗口显示
+    // 进程创建行为,它控制 系统底层如何启动进程， 是否创建新控制台 (CREATE_NEW_CONSOLE) 是否不显示窗口 (CREATE_NO_WINDOW) 是否使用 Unicode 环境 (CREATE_UNICODE_ENVIRONMENT) 是否挂起进程 (CREATE_SUSPENDED)
+    DWORD flags = CREATE_UNICODE_ENVIRONMENT ;
+    si.dwFlags |= STARTF_USESHOWWINDOW; ; // 告诉系统 wShowWindow 有效
+    switch(mode){
+    case 0: // GUI 或 console 显示
+        flags |= CREATE_NEW_CONSOLE;//如果是console  给 console 创建窗口
+        si.wShowWindow = SW_SHOW;
+        break;
+    case 1:
+        si.wShowWindow = SW_HIDE;
+        break;
+    }
+
+    PROCESS_INFORMATION pi{};
+    BOOL ok = CreateProcessAsUserW(
+        primaryToken,
+        NULL,
+        cmd.data(),
+        NULL,
+        NULL,
+        FALSE,
+        flags,
+        environment,
+        cwd.empty() ? NULL : cwd.c_str(),
+        &si,
+        &pi
+    );
+
+    if (environment) DestroyEnvironmentBlock(environment);
+    CloseHandle(primaryToken);
+    CloseHandle(userToken);
+
+    if (ok) {
+        DWORD pid = pi.dwProcessId;
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        return Napi::Number::New(env, pid);
+    }
+
+    return Napi::Number::New(env, -1);
+}
+
 
 #pragma clang diagnostic pop
 
