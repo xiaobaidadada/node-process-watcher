@@ -347,26 +347,41 @@ void send_data_to_on()
     }
 }
 
-void kill_process(unsigned long pid, bool kill_all_children )
+void kill_process(unsigned long pid, bool kill_all_children)
 {
     if (kill_all_children)
     {
-        std::vector<process_pid_info>  pid_set;
-        get_all_process_ids(pid_set,pid);
+        std::vector<process_pid_info> pid_set;
+        get_all_process_ids(pid_set, pid);
+
         for (size_t i = 0; i < pid_set.size(); ++i) {
             const process_pid_info info = pid_set[i];
-            kill_process(info.pid,kill_all_children); // 递归的关闭所有进程的子进程
+            kill_process(info.pid, kill_all_children); // 递归关闭子进程
         }
     }
-    // 打开目标进程的句柄
-    HANDLE hProcess;
-    hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
+
+    // 打开进程（加上 SYNCHRONIZE 权限用于等待）
+    HANDLE hProcess = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, FALSE, pid);
     if (hProcess == NULL) {
         return;
     }
+
     // 终止进程
-    TerminateProcess(hProcess, 0);
-    // 关闭句柄
+    if (!TerminateProcess(hProcess, 0)) {
+        CloseHandle(hProcess);
+        return;
+    }
+
+    // ✅ 等待进程真正退出
+    DWORD waitResult = WaitForSingleObject(hProcess, 3000); // 等待3秒
+
+//     if (waitResult == WAIT_TIMEOUT) {
+//         // 超时（进程还没退出）
+//         // 可以选择继续等或记录日志
+//     } else if (waitResult == WAIT_OBJECT_0) {
+//         // 进程已经完全退出
+//     }
+
     CloseHandle(hProcess);
 }
 

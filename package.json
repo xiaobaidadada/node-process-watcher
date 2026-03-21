@@ -1,6 +1,6 @@
 {
   "name": "node-process-watcher",
-  "version": "1.6.5",
+  "version": "1.6.6",
   "description": "Get process information in real time",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
