@@ -922,18 +922,14 @@ public:
                   const std::wstring& args,
                   const std::wstring& cwd,
                   Napi::Function dataCallback,
-                  Napi::Function pidCallback,   // 新增
                   Napi::Function doneCallback)
-        : Napi::AsyncWorker(doneCallback),
+        : Napi::AsyncWorker(doneCallback),  // AsyncWorker 的默认回调用作完成回调
           exe_path_(exe_path), args_(args), cwd_(cwd),
-          tsfn_(Napi::ThreadSafeFunction::New(env, dataCallback, "OnData", 0, 1)),
-          // 初始化 PID 的线程安全函数
-          tsfnPid_(Napi::ThreadSafeFunction::New(env, pidCallback, "OnPid", 0, 1))
+          tsfn_(Napi::ThreadSafeFunction::New(env, dataCallback, "OnData", 0, 1))
     {}
 
     ~ProcessWorker() {
         tsfn_.Release();
-        tsfnPid_.Release(); // 释放
     }
 
     void Execute() override {
@@ -956,56 +952,62 @@ public:
 
         std::wstring cmd = L"\"" + exe_path_ + L"\" " + args_;
 
+        // 获取当前活动用户 Session
         DWORD sessionId = WTSGetActiveConsoleSessionId();
         HANDLE userToken = NULL;
         WTSQueryUserToken(sessionId, &userToken);
         HANDLE primaryToken = NULL;
-        DuplicateTokenEx(userToken,
-                         TOKEN_ASSIGN_PRIMARY | TOKEN_DUPLICATE | TOKEN_QUERY | TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID,
-                         NULL, SecurityImpersonation, TokenPrimary, &primaryToken);
-
+        DuplicateTokenEx(
+                            userToken,
+                            TOKEN_ASSIGN_PRIMARY | TOKEN_DUPLICATE | TOKEN_QUERY | TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID,
+                            NULL,
+                            SecurityImpersonation,
+                            TokenPrimary,
+                            &primaryToken);
         LPVOID environment = NULL;
-        CreateEnvironmentBlock(&environment, primaryToken, FALSE);
-
-        BOOL ok = CreateProcessAsUserW(
-            primaryToken, NULL, cmd.data(), NULL, NULL, TRUE,
-            CREATE_UNICODE_ENVIRONMENT, environment,
-            cwd_.empty() ? nullptr : cwd_.c_str(), &si, &pi
-        );
-
-        if (ok) {
-            // --- 核心修改：进程启动成功，立即发送 PID ---
-            DWORD pid = pi.dwProcessId;
-            tsfnPid_.BlockingCall([pid](Napi::Env env, Napi::Function jsCallback) {
-                jsCallback.Call({ Napi::Number::New(env, pid) });
-            });
-            // PID 只发一次，可以直接释放引用
-            tsfnPid_.Release();
-        } else {
-            SetError("CreateProcessAsUserW failed");
-        }
-
-        CloseHandle(hStdOutWrite);
-
-        if (environment) DestroyEnvironmentBlock(environment);
-        CloseHandle(primaryToken);
-        CloseHandle(userToken);
-
-        if (ok) {
-            char buffer[4096];
-            DWORD bytesRead;
-            while (ReadFile(hStdOutRead, buffer, sizeof(buffer) - 1, &bytesRead, nullptr) && bytesRead > 0) {
-                std::string output(buffer, bytesRead);
-                tsfn_.BlockingCall([output](Napi::Env env, Napi::Function jsCallback) {
-                    jsCallback.Call({ Napi::String::New(env, output) });
-                });
+            if (!CreateEnvironmentBlock(&environment, primaryToken, FALSE)) {
+                environment = NULL;
             }
 
-            WaitForSingleObject(pi.hProcess, INFINITE);
-            CloseHandle(pi.hProcess);
-            CloseHandle(pi.hThread);
+            DWORD flags = CREATE_UNICODE_ENVIRONMENT;
+
+
+            BOOL ok = CreateProcessAsUserW(
+                primaryToken,
+                NULL,
+                cmd.data(),
+                NULL,
+                NULL,
+                TRUE,
+                flags,
+                environment,
+                 cwd_.empty() ? nullptr : cwd_.c_str(),
+                &si,
+                &pi
+            );
+
+        CloseHandle(hStdOutWrite); // 关闭写端，子进程可以写
+
+        if (environment) DestroyEnvironmentBlock(environment);
+         CloseHandle(primaryToken);
+            CloseHandle(userToken);
+
+        char buffer[4096];
+        DWORD bytesRead;
+        while (ReadFile(hStdOutRead, buffer, sizeof(buffer)-1, &bytesRead, nullptr) && bytesRead > 0) {
+//             buffer[bytesRead] = '\0';
+            if(bytesRead==0) break;
+            std::string output(buffer, bytesRead);
+
+            tsfn_.BlockingCall([output](Napi::Env env, Napi::Function jsCallback) {
+                jsCallback.Call({ Napi::String::New(env, output) });
+            });
         }
+
         CloseHandle(hStdOutRead);
+        WaitForSingleObject(pi.hProcess, INFINITE);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
     }
 
 private:
@@ -1013,42 +1015,58 @@ private:
     std::wstring args_;
     std::wstring cwd_;
     Napi::ThreadSafeFunction tsfn_;
-    Napi::ThreadSafeFunction tsfnPid_; // 新增成员
 };
 
 
 Napi::Value LaunchUserConsoleProcess(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
 
-    // 1. 参数数量检查改为 6 个
-    // 0:path, 1:args, 2:cwd, 3:onData, 4:onPid, 5:onDone
-    if (info.Length() < 6) {
-        Napi::TypeError::New(env, "Expected 6 arguments: exePath, args, cwd, dataCallback, pidCallback, doneCallback").ThrowAsJavaScriptException();
+    // 参数数量检查
+    if (info.Length() < 5) {
+        Napi::TypeError::New(env, "Expected 5 arguments: exePath, args, cwd, dataCallback, doneCallback").ThrowAsJavaScriptException();
         return env.Null();
     }
 
-    // 前三个参数（path, args, cwd）的获取代码保持不变...
+    // exePath
+    if (!info[0].IsString()) {
+        Napi::TypeError::New(env, "exePath must be a string").ThrowAsJavaScriptException();
+        return env.Null();
+    }
     std::u16string u16path = info[0].ToString().Utf16Value();
     std::wstring exe_path(u16path.begin(), u16path.end());
 
+    // args
+    if (!info[1].IsString()) {
+        Napi::TypeError::New(env, "args must be a string").ThrowAsJavaScriptException();
+        return env.Null();
+    }
     std::u16string u16args = info[1].ToString().Utf16Value();
     std::wstring args(u16args.begin(), u16args.end());
 
+    // cwd
+    if (!info[2].IsString()) {
+        Napi::TypeError::New(env, "cwd must be a string").ThrowAsJavaScriptException();
+        return env.Null();
+    }
     std::u16string u16cwd = info[2].ToString().Utf16Value();
     std::wstring cwd(u16cwd.begin(), u16cwd.end());
 
-    // 2. 获取回调函数
-    if (!info[3].IsFunction() || !info[4].IsFunction() || !info[5].IsFunction()) {
-        Napi::TypeError::New(env, "Callbacks must be functions").ThrowAsJavaScriptException();
+    // dataCallback
+    if (!info[3].IsFunction()) {
+        Napi::TypeError::New(env, "dataCallback must be a function").ThrowAsJavaScriptException();
         return env.Null();
     }
-
     Napi::Function dataCallback = info[3].As<Napi::Function>();
-    Napi::Function pidCallback = info[4].As<Napi::Function>(); // 新增
-    Napi::Function doneCallback = info[5].As<Napi::Function>();
 
-    // 3. 创建并队列异步任务，传入 pidCallback
-    ProcessWorker* worker = new ProcessWorker(env, exe_path, args, cwd, dataCallback, pidCallback, doneCallback);
+    // doneCallback
+    if (!info[4].IsFunction()) {
+        Napi::TypeError::New(env, "doneCallback must be a function").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+    Napi::Function doneCallback = info[4].As<Napi::Function>();
+
+    // 创建并队列异步任务
+    ProcessWorker* worker = new ProcessWorker(env, exe_path, args, cwd, dataCallback, doneCallback);
     worker->Queue();
 
     return env.Null();

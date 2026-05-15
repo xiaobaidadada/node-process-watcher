@@ -125,12 +125,11 @@ export interface node_process_watcher_type {
 
     launch_process_as_user_for_win_service_console(
         exe_path: string,
-        args: string,         // 建议非必选改为必选，或在调用层赋默认值 ""
-        cwd: string,          // 同上，或赋默认值 "."
-        on_data: (data: string) => void,
-        on_pid: (pid: number) => void,  // 用于接收进程 PID
-        on_done: () => void
-    ): void;
+        args?: string,
+        cwd?: string,
+        on_data?:(data: string)=>void,
+        on_done?:()=>void
+    ):void;
 
     // 获取全部的正在运行的进程信息
     get_all_processes():{pid:number,name:string}[];
