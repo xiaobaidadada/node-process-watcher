@@ -9,10 +9,10 @@ const args = "log.js"
 const cwd = "E:\\workspace\\github\\node-process-watcher\\test"
 node_process_watcher.launch_process_as_user_for_win_service_console(p,args,cwd,(data)=>{
     console.log("11",data)
-},(pid)=>{
-    console.log("pid",pid)
 },()=>{
-    console.log('ok')
+    console.log('完成')
+},(pid)=>{
+    console.log('pid',pid)
 })
 // console.log(a)
 
