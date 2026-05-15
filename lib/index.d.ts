@@ -105,7 +105,7 @@ export interface node_process_watcher_type {
      * @param args
      */
     launch_process_as_user_for_win_service(exe_path: string, args?: string, cwd?: string): number;
-    launch_process_as_user_for_win_service_console(exe_path: string, args?: string, cwd?: string, on_data?: (data: string) => void, on_done?: () => void): void;
+    launch_process_as_user_for_win_service_console(exe_path: string, args: string, cwd: string, on_data: (data: string) => void, on_pid: (pid: number) => void, on_done: () => void): void;
     get_all_processes(): {
         pid: number;
         name: string;

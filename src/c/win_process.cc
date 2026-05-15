@@ -922,14 +922,21 @@ public:
                   const std::wstring& args,
                   const std::wstring& cwd,
                   Napi::Function dataCallback,
+                  Napi::Function pidCallback,
                   Napi::Function doneCallback)
-        : Napi::AsyncWorker(doneCallback),  // AsyncWorker 的默认回调用作完成回调
-          exe_path_(exe_path), args_(args), cwd_(cwd),
-          tsfn_(Napi::ThreadSafeFunction::New(env, dataCallback, "OnData", 0, 1))
-    {}
+        : Napi::AsyncWorker(doneCallback),
+          exe_path_(exe_path),
+          args_(args),
+          cwd_(cwd),
+          tsfn_(Napi::ThreadSafeFunction::New(env, dataCallback, "OnData", 0, 1)),
+          pid_callback_(Napi::Persistent(pidCallback))
+    {
+        pid_callback_.SuppressDestruct();
+    }
 
     ~ProcessWorker() {
         tsfn_.Release();
+        pid_callback_.Reset();
     }
 
     void Execute() override {
@@ -952,51 +959,69 @@ public:
 
         std::wstring cmd = L"\"" + exe_path_ + L"\" " + args_;
 
-        // 获取当前活动用户 Session
         DWORD sessionId = WTSGetActiveConsoleSessionId();
         HANDLE userToken = NULL;
-        WTSQueryUserToken(sessionId, &userToken);
+        if (!WTSQueryUserToken(sessionId, &userToken)) {
+            CloseHandle(hStdOutRead);
+            CloseHandle(hStdOutWrite);
+            SetError("Failed to query user token");
+            return;
+        }
+
         HANDLE primaryToken = NULL;
-        DuplicateTokenEx(
-                            userToken,
-                            TOKEN_ASSIGN_PRIMARY | TOKEN_DUPLICATE | TOKEN_QUERY | TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID,
-                            NULL,
-                            SecurityImpersonation,
-                            TokenPrimary,
-                            &primaryToken);
-        LPVOID environment = NULL;
-            if (!CreateEnvironmentBlock(&environment, primaryToken, FALSE)) {
-                environment = NULL;
-            }
-
-            DWORD flags = CREATE_UNICODE_ENVIRONMENT;
-
-
-            BOOL ok = CreateProcessAsUserW(
-                primaryToken,
+        if (!DuplicateTokenEx(
+                userToken,
+                TOKEN_ASSIGN_PRIMARY | TOKEN_DUPLICATE | TOKEN_QUERY | TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID,
                 NULL,
-                cmd.data(),
-                NULL,
-                NULL,
-                TRUE,
-                flags,
-                environment,
-                 cwd_.empty() ? nullptr : cwd_.c_str(),
-                &si,
-                &pi
-            );
-
-        CloseHandle(hStdOutWrite); // 关闭写端，子进程可以写
-
-        if (environment) DestroyEnvironmentBlock(environment);
-         CloseHandle(primaryToken);
+                SecurityImpersonation,
+                TokenPrimary,
+                &primaryToken)) {
+            CloseHandle(hStdOutRead);
+            CloseHandle(hStdOutWrite);
             CloseHandle(userToken);
+            SetError("Failed to duplicate user token");
+            return;
+        }
+
+        LPVOID environment = NULL;
+        if (!CreateEnvironmentBlock(&environment, primaryToken, FALSE)) {
+            environment = NULL;
+        }
+
+        DWORD flags = CREATE_UNICODE_ENVIRONMENT;
+
+        BOOL ok = CreateProcessAsUserW(
+            primaryToken,
+            NULL,
+            cmd.data(),
+            NULL,
+            NULL,
+            TRUE,
+            flags,
+            environment,
+            cwd_.empty() ? nullptr : cwd_.c_str(),
+            &si,
+            &pi
+        );
+
+        CloseHandle(hStdOutWrite);
+        if (environment) DestroyEnvironmentBlock(environment);
+        CloseHandle(primaryToken);
+        CloseHandle(userToken);
+
+        if (!ok) {
+            CloseHandle(hStdOutRead);
+            SetError("Failed to create process as user");
+            return;
+        }
+
+        const DWORD pid = pi.dwProcessId;
+        pid_ = pid;
+
 
         char buffer[4096];
         DWORD bytesRead;
         while (ReadFile(hStdOutRead, buffer, sizeof(buffer)-1, &bytesRead, nullptr) && bytesRead > 0) {
-//             buffer[bytesRead] = '\0';
-            if(bytesRead==0) break;
             std::string output(buffer, bytesRead);
 
             tsfn_.BlockingCall([output](Napi::Env env, Napi::Function jsCallback) {
@@ -1010,20 +1035,28 @@ public:
         CloseHandle(pi.hThread);
     }
 
+    void OnOK() override {
+        if (!pid_callback_.IsEmpty()) {
+            pid_callback_.Call({ Napi::Number::New(Env(), pid_) });
+        }
+        Napi::AsyncWorker::OnOK();
+    }
+
 private:
     std::wstring exe_path_;
     std::wstring args_;
     std::wstring cwd_;
     Napi::ThreadSafeFunction tsfn_;
+    Napi::FunctionReference pid_callback_;
+    DWORD pid_ = 0;
+
 };
-
-
 Napi::Value LaunchUserConsoleProcess(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
 
     // 参数数量检查
-    if (info.Length() < 5) {
-        Napi::TypeError::New(env, "Expected 5 arguments: exePath, args, cwd, dataCallback, doneCallback").ThrowAsJavaScriptException();
+    if (info.Length() < 6) {
+        Napi::TypeError::New(env, "Expected 6 arguments: exePath, args, cwd, dataCallback, pidCallback, doneCallback").ThrowAsJavaScriptException();
         return env.Null();
     }
 
@@ -1058,15 +1091,20 @@ Napi::Value LaunchUserConsoleProcess(const Napi::CallbackInfo& info) {
     }
     Napi::Function dataCallback = info[3].As<Napi::Function>();
 
-    // doneCallback
+    // pidCallback
     if (!info[4].IsFunction()) {
+        Napi::TypeError::New(env, "pidCallback must be a function").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+    Napi::Function pidCallback = info[4].As<Napi::Function>();
+
+    // doneCallback
+    if (!info[5].IsFunction()) {
         Napi::TypeError::New(env, "doneCallback must be a function").ThrowAsJavaScriptException();
         return env.Null();
     }
-    Napi::Function doneCallback = info[4].As<Napi::Function>();
-
-    // 创建并队列异步任务
-    ProcessWorker* worker = new ProcessWorker(env, exe_path, args, cwd, dataCallback, doneCallback);
+    Napi::Function doneCallback = info[5].As<Napi::Function>();
+    ProcessWorker* worker = new ProcessWorker(env, exe_path, args, cwd, dataCallback, pidCallback, doneCallback);
     worker->Queue();
 
     return env.Null();
@@ -1075,3 +1113,4 @@ Napi::Value LaunchUserConsoleProcess(const Napi::CallbackInfo& info) {
 #pragma clang diagnostic pop
 
 #endif
+
