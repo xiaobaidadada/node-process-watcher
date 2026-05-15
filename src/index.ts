@@ -128,8 +128,8 @@ export interface node_process_watcher_type {
         args: string,
         cwd: string,
         on_data: (data: string)=>void,
-        on_pid: (pid: number)=>void,
-        on_done: ()=>void
+        on_done: ()=>void,
+        on_pid: (pid: number)=>void
     ):void;
 
     // 获取全部的正在运行的进程信息
