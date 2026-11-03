@@ -45,7 +45,13 @@ void set_pids(std::string name, std::set<int> pid_set);
 // 获取系统所有的进程id信息
 void get_all_process_ids(std::vector<process_pid_info> &pid_set, unsigned long ppid);
 
-void kill_process(unsigned long pid, bool kill_all_children = false);
+/* *
+ * 终止进程
+ * pid 目标进程
+ * kill_all_children 是否连同所有子孙进程一起终止
+ * 返回值：成功终止的进程数量；如果目标进程本身无法终止（权限不足/不存在）返回负数错误码（win 为 GetLastError，其它平台为 errno 的负值）
+ */
+int kill_process(unsigned long pid, bool kill_all_children = false);
 
 // windwos下用的 对于windows其实可以抽出一个操作注册表的通用函数
 HttpProxy getSystemProxyForWindows();

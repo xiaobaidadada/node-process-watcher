@@ -347,42 +347,95 @@ void send_data_to_on()
     }
 }
 
-void kill_process(unsigned long pid, bool kill_all_children)
+// 收集进程的所有子孙 PID（迭代方式，带 visited 集合，父进程 id 异常也不会死循环）
+static void collect_descendants(unsigned long pid, std::vector<unsigned long> &out)
 {
-    if (kill_all_children)
-    {
-        std::vector<process_pid_info> pid_set;
-        get_all_process_ids(pid_set, pid);
+    std::vector<process_pid_info> all;
+    // 只取一次全量快照，避免每层递归都重新枚举
+    get_all_process_ids(all, (unsigned long)-1);
 
-        for (size_t i = 0; i < pid_set.size(); ++i) {
-            const process_pid_info info = pid_set[i];
-            kill_process(info.pid, kill_all_children); // 递归关闭子进程
+    std::set<unsigned long> visited;
+    visited.insert(pid); // 关键：把自身放入已访问集合，杜绝 PID==PPID 造成的无限递归
+
+    std::vector<unsigned long> pending;
+    pending.push_back(pid);
+    while (!pending.empty())
+    {
+        unsigned long parent = pending.back();
+        pending.pop_back();
+        for (size_t i = 0; i < all.size(); ++i)
+        {
+            const process_pid_info &info = all[i];
+            if (info.ppid != parent)
+            {
+                continue;
+            }
+            if (!visited.insert(info.pid).second)
+            {
+                continue; // 已经处理过，跳过，避免环
+            }
+            out.push_back(info.pid);
+            pending.push_back(info.pid);
         }
     }
+}
 
-    // 打开进程（加上 SYNCHRONIZE 权限用于等待）
-    HANDLE hProcess = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, FALSE, pid);
-    if (hProcess == NULL) {
-        return;
+int kill_process(unsigned long pid, bool kill_all_children)
+{
+    if (pid == 0)
+    {
+        // 注意：Windows 上 ppid 为 0 的进程是绝大部分顶层进程，按 ppid=0 递归会把整台机器的进程都杀了
+        return -ERROR_INVALID_PARAMETER;
     }
 
-    // 终止进程
-    if (!TerminateProcess(hProcess, 0)) {
+    std::vector<unsigned long> targets;
+    if (kill_all_children)
+    {
+        collect_descendants(pid, targets);
+    }
+    // 自身最后处理，保证先处理父进程时子进程还找得到
+    targets.push_back(pid);
+
+    int killed_count = 0;
+    int first_error = 0;
+    for (size_t i = 0; i < targets.size(); ++i)
+    {
+        unsigned long current_pid = targets[i];
+        // 打开进程（加上 SYNCHRONIZE 权限用于等待）
+        HANDLE hProcess = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, FALSE, current_pid);
+        if (hProcess == NULL)
+        {
+            // 记录第一个错误，最后由 JS 侧决定是否抛出，避免静默失败
+            if (first_error == 0)
+            {
+                first_error = -(int)GetLastError();
+            }
+            continue;
+        }
+
+        // 终止进程
+        if (!TerminateProcess(hProcess, 0))
+        {
+            if (first_error == 0)
+            {
+                first_error = -(int)GetLastError();
+            }
+            CloseHandle(hProcess);
+            continue;
+        }
+        killed_count++;
+
+        // ✅ 等待进程真正退出
+        WaitForSingleObject(hProcess, 3000); // 等待3秒
         CloseHandle(hProcess);
-        return;
     }
 
-    // ✅ 等待进程真正退出
-    DWORD waitResult = WaitForSingleObject(hProcess, 3000); // 等待3秒
-
-//     if (waitResult == WAIT_TIMEOUT) {
-//         // 超时（进程还没退出）
-//         // 可以选择继续等或记录日志
-//     } else if (waitResult == WAIT_OBJECT_0) {
-//         // 进程已经完全退出
-//     }
-
-    CloseHandle(hProcess);
+    // 目标进程本身一个都没杀掉时要报错，其它情况只返回成功数量
+    if (killed_count == 0 && first_error != 0)
+    {
+        return first_error;
+    }
+    return killed_count;
 }
 
 void get_all_process_ids(std::vector<process_pid_info> & pid_set,unsigned long ppid)

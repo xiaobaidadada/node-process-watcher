@@ -1,6 +1,6 @@
 {
   "name": "node-process-watcher",
-  "version": "1.7.5",
+  "version": "1.7.6 ",
   "description": "Get process information in real time",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -9,7 +9,7 @@
     "url": "git@github.com:xiaobaidadada/node-process-watcher.git"
   },
   "scripts": {
-    "install": "prebuild-install --verbose || npm run install_build",
+    "install": "npm run install_build",
     "install_build": "node-gyp rebuild --release",
     "cc-rebuild": " node-gyp rebuild",
     "cc-configure": "node-gyp configure",
@@ -36,7 +36,6 @@
   "author": "xiaobaidadada",
   "license": "MIT",
   "dependencies": {
-    "prebuild-install": "^7.1.2",
     "node-addon-api": "^8.6.0",
     "node-gyp": "^10.3.1"
   },

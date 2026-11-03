@@ -13,6 +13,7 @@
 #include <mach/mach.h>
 #include <iostream>
 #include <signal.h>
+#include <errno.h>
 #include <unordered_map>
 #include <chrono>
 #include <cstdint>
@@ -295,13 +296,56 @@ void get_all_process_ids(std::vector<process_pid_info> &pid_set, unsigned long p
     }
 }
 
-void kill_process(unsigned long pid, bool kill_all_children) {
-    if (kill_all_children) {
-        std::vector<process_pid_info> children;
-        get_all_process_ids(children, pid);
-        for (auto &c: children) kill_process(c.pid, kill_all_children);
+// 收集进程的所有子孙 PID（迭代方式，visited 集合防止异常 ppid 造成死循环）
+static void collect_descendants(unsigned long pid, std::vector<unsigned long> &out) {
+    std::vector<process_pid_info> all;
+    get_all_process_ids(all, (unsigned long) -1);
+
+    std::set<unsigned long> visited;
+    visited.insert(pid); // 自身标记已访问
+
+    std::vector<unsigned long> pending;
+    pending.push_back(pid);
+    while (!pending.empty()) {
+        unsigned long parent = pending.back();
+        pending.pop_back();
+        for (size_t i = 0; i < all.size(); ++i) {
+            const process_pid_info &info = all[i];
+            if (info.ppid != parent) continue;
+            if (!visited.insert(info.pid).second) continue; // 构成环，跳过
+            out.push_back(info.pid);
+            pending.push_back(info.pid);
+        }
     }
-    ::kill(static_cast<pid_t>(pid), SIGTERM);
+}
+
+int kill_process(unsigned long pid, bool kill_all_children) {
+    if (pid == 0) {
+        errno = EINVAL;
+        return -errno;
+    }
+
+    std::vector<unsigned long> targets;
+    if (kill_all_children) {
+        collect_descendants(pid, targets);
+    }
+    targets.push_back(pid); // 自身放在最后处理
+
+    int killed_count = 0;
+    int first_error = 0;
+    for (size_t i = 0; i < targets.size(); ++i) {
+        unsigned long current_pid = targets[i];
+        if (::kill(static_cast<pid_t>(current_pid), SIGTERM) != 0) {
+            int err = errno;
+            // 进程已经不存在不算错误
+            if (err != ESRCH && first_error == 0) first_error = -err;
+            continue;
+        }
+        killed_count++;
+    }
+
+    if (killed_count == 0 && first_error != 0) return first_error;
+    return killed_count;
 }
 
 

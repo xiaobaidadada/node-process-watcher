@@ -131,7 +131,13 @@ void kill (const Napi::CallbackInfo &info)
         Napi::TypeError::New(env, "param num is error .").ThrowAsJavaScriptException();
         return;
     }
-    kill_process(info[0].As<Napi::Number>().Int64Value(), info.Length() ==1 ? false: info[1].As<Napi::Boolean>().Value());
+    // 返回值小于 0 表示目标进程无法终止（权限不足/不存在等），抛错给 JS，不再静默失败
+    int result = kill_process(info[0].As<Napi::Number>().Int64Value(),
+                              info.Length() > 1 ? info[1].As<Napi::Boolean>().Value() : false);
+    if (result < 0) {
+        Napi::Error::New(env, "kill process failed, error code: " + std::to_string(-result))
+            .ThrowAsJavaScriptException();
+    }
 }
 
 Napi::Boolean is_admin(const Napi::CallbackInfo &info)

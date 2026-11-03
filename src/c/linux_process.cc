@@ -10,6 +10,7 @@
 #include <ctype.h>
 #include <mutex>
 #include <signal.h>  // 提供 kill() 函数
+#include <errno.h>
 #include <fstream>
 
 #define PROC_DIR "/proc"
@@ -268,18 +269,67 @@ void send_data_to_on() {
 
 }
 
-void kill_process(unsigned long pid, bool kill_all_children )
+// 收集进程的所有子孙 PID（迭代方式，visited 集合防止 PID==PPID 之类异常导致死循环）
+static void collect_descendants(unsigned long pid, std::vector<unsigned long> &out)
 {
-    if (kill_all_children)
-    {
-        std::vector<process_pid_info>  pid_set;
-        get_all_process_ids(pid_set,pid);
-        for (size_t i = 0; i < pid_set.size(); ++i) {
-            const process_pid_info info = pid_set[i];
-            kill_process(info.pid,kill_all_children); // 递归的关闭所有进程的子进程
+    std::vector<process_pid_info> all;
+    get_all_process_ids(all, (unsigned long) -1);
+
+    std::set<unsigned long> visited;
+    visited.insert(pid); // 自身标记已访问，杜绝自引用造成的无限展开
+
+    std::vector<unsigned long> pending;
+    pending.push_back(pid);
+    while (!pending.empty()) {
+        unsigned long parent = pending.back();
+        pending.pop_back();
+        for (size_t i = 0; i < all.size(); ++i) {
+            const process_pid_info &info = all[i];
+            if (info.ppid != parent) {
+                continue;
+            }
+            if (!visited.insert(info.pid).second) {
+                continue; // 构成环，跳过
+            }
+            out.push_back(info.pid);
+            pending.push_back(info.pid);
         }
     }
-    kill(pid, SIGTERM); // 向目标进程发送 SIGTERM 信号（请求进程终止） SIGKILL 也可以 但是进程会立即被关闭 可能发生的清理工作无法进行
+}
+
+int kill_process(unsigned long pid, bool kill_all_children)
+{
+    if (pid == 0) {
+        errno = EINVAL;
+        return -errno;
+    }
+
+    std::vector<unsigned long> targets;
+    if (kill_all_children) {
+        collect_descendants(pid, targets);
+    }
+    targets.push_back(pid); // 自身放在最后
+
+    int killed_count = 0;
+    int first_error = 0;
+    for (size_t i = 0; i < targets.size(); ++i) {
+        unsigned long current_pid = targets[i];
+        // SIGKILL 也可以，但进程会立即结束、无法做清理工作
+        if (kill((pid_t) current_pid, SIGTERM) != 0) {
+            // 进程已经不存在不算错误，权限不足等才记录
+            int err = errno;
+            if (err != ESRCH && first_error == 0) {
+                first_error = -err;
+            }
+            continue;
+        }
+        killed_count++;
+    }
+
+    if (killed_count == 0 && first_error != 0) {
+        return first_error;
+    }
+    return killed_count;
 }
 
 void get_all_process_ids(std::vector<process_pid_info> & pid_set,unsigned long ppid)
