@@ -1,12 +1,12 @@
 {
   "name": "node-process-watcher",
-  "version": "1.7.6 ",
+  "version": "1.7.7",
   "description": "Get process information in real time",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "git@github.com:xiaobaidadada/node-process-watcher.git"
+    "url": "git+ssh://git@github.com/xiaobaidadada/node-process-watcher.git"
   },
   "scripts": {
     "install": "npm run install_build",
